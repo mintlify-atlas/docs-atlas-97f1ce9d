@@ -1,0 +1,88 @@
+---
+title: "Automate Zotero note workflows with Actions & Tags"
+description: "Use the Actions & Tags plugin with Better Notes to auto-generate notes from templates and auto-sync Markdown on item events in Zotero."
+---
+
+Workflow automation lets you trigger note actions automatically based on events in Zotero — for example, generating a structured summary note every time you add a new paper, or keeping a Markdown file in sync whenever you open an item. This is handled by a separate companion plugin called Actions & Tags, which exposes Better Notes actions as scriptable triggers.
+
+<Note>
+  Workflow automation requires the [Actions & Tags for Zotero](https://github.com/windingwind/zotero-actions-tags) plugin to be installed alongside Better Notes. The two plugins work together, but Actions & Tags must be installed separately.
+</Note>
+
+## How it works
+
+Actions & Tags provides a workflow engine that runs user-defined scripts in response to Zotero events (opening an item, adding an item, creating a note, and more). When Better Notes is also installed, it exposes its note API as callable actions. You configure which action runs on which event inside the Actions & Tags preferences.
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install Better Notes">
+    Download and install the Better Notes `.xpi` from the [latest release](https://github.com/windingwind/zotero-better-notes/releases/latest) via **Tools** → **Plugins** → gear icon → **Install Add-on from file**.
+  </Step>
+  <Step title="Install Actions & Tags">
+    Download the Actions & Tags `.xpi` from its [latest release](https://github.com/windingwind/zotero-actions-tags/releases/latest) and install it the same way.
+  </Step>
+  <Step title="Restart Zotero">
+    Restart Zotero to ensure both plugins are active and have registered their APIs with each other.
+  </Step>
+</Steps>
+
+## Available automation actions
+
+The following community-documented actions are available when both plugins are installed:
+
+<CardGroup cols={2}>
+  <Card title="Auto-generate note from template" icon="file-plus" href="https://github.com/windingwind/zotero-actions-tags/discussions/108">
+    Runs an Item template automatically when you open an item, creating a structured note without any manual steps.
+  </Card>
+  <Card title="Auto-sync note on open/create" icon="refresh-cw" href="https://github.com/windingwind/zotero-actions-tags/discussions/140">
+    Triggers a Markdown sync operation whenever an item is opened or a new item is created, keeping your external files up to date.
+  </Card>
+</CardGroup>
+
+More community-contributed action scripts are available in the [Actions & Tags discussion board](https://github.com/windingwind/zotero-actions-tags/discussions/categories/action-scripts).
+
+## Example use cases
+
+<AccordionGroup>
+  <Accordion title="Generate a paper summary note on import">
+    Configure Actions & Tags to fire an Item template (e.g., `[Item] Paper Summary`) every time Zotero's **Add Item** event fires. When you import a paper from a browser or DOI lookup, Better Notes immediately creates a structured note with the title, authors, abstract, and DOI pre-filled.
+  </Accordion>
+  <Accordion title="Keep a reading log in sync with Markdown">
+    Set an action to run the Better Notes sync operation on the **Open Item** event. Each time you open a paper to read it, the corresponding Markdown file in your Obsidian vault is refreshed with the latest note content from Zotero.
+  </Accordion>
+  <Accordion title="Batch-generate notes for existing items">
+    Select multiple items in the library and run an Item template manually from the note editor toolbar. Actions & Tags is not required for one-off batch runs — it only adds persistent event-based triggering.
+  </Accordion>
+</AccordionGroup>
+
+## Configuring an action
+
+<Steps>
+  <Step title="Open Actions & Tags preferences">
+    In Zotero, go to **Edit** → **Preferences** → **Actions & Tags** (or **Tools** → **Actions & Tags**).
+  </Step>
+  <Step title="Add a new action">
+    Click **Add** to create a new action entry. Give it a descriptive name.
+  </Step>
+  <Step title="Choose an event trigger">
+    Select the Zotero event that should trigger the action, such as **Open Item** or **Add Item**.
+  </Step>
+  <Step title="Paste the action script">
+    Copy the script from the relevant [Actions & Tags discussion thread](https://github.com/windingwind/zotero-actions-tags/discussions/categories/action-scripts) and paste it into the script field.
+  </Step>
+  <Step title="Save and test">
+    Save the action and perform the trigger event to verify it works. Check the Zotero error console if the action does not fire as expected.
+  </Step>
+</Steps>
+
+## Related guides
+
+<CardGroup cols={2}>
+  <Card title="Template writing" icon="file-code" href="/guides/template-writing">
+    Write the Item templates that your automated actions will run.
+  </Card>
+  <Card title="Obsidian integration" icon="refresh-cw" href="/guides/obsidian-integration">
+    Set up Markdown sync that automation can trigger automatically.
+  </Card>
+</CardGroup>

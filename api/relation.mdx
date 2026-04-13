@@ -1,0 +1,217 @@
+---
+title: "Relation API — Better Notes for Zotero"
+description: "Reference for the Better Notes relation module: query inbound and outbound note-link relationships, update relation data, and link annotations to note targets."
+---
+
+The relation module maintains a graph of `zotero://note/` link relationships between notes. Relationship data is stored and queried in a background Web Worker (`relationWorker`) that runs separately from the main Zotero thread. All functions are asynchronous. The module also tracks links from PDF annotations to note targets, enabling bidirectional navigation between annotation highlights and the note sections they reference.
+
+<Info>
+Call `updateNoteLinkRelation` after modifying a note's content to refresh its outbound link index. Better Notes calls this automatically when a note is saved, but you should call it manually if you modify note HTML via the API.
+</Info>
+
+## Link model
+
+Most relation functions return or accept `LinkModel` objects with the following shape:
+
+```typescript
+interface LinkModel {
+  fromLibID: number;     // Library ID of the source note
+  fromKey: string;       // Item key of the source note
+  toLibID: number;       // Library ID of the target note
+  toKey: string;         // Item key of the target note
+  fromLine: number;      // Line index in the source note where the link appears
+  toLine: number | null; // Target line index in the destination note (null if not specified)
+  toSection: string | null; // Target section name (null if not specified)
+  url: string;           // The full zotero://note/ URL
+}
+```
+
+---
+
+## `getNoteLinkInboundRelation`
+
+Returns all `LinkModel` records for links that point **to** the given note — i.e., notes that contain a `zotero://note/` link targeting this note.
+
+```typescript
+async function getNoteLinkInboundRelation(noteID: number): Promise<LinkModel[]>
+```
+
+<ParamField path="noteID" type="number" required>
+  The numeric item ID of the note to query.
+</ParamField>
+
+<ResponseField name="return" type="Promise<LinkModel[]>">
+  Array of link records where `toKey` matches the note's key. Returns an empty array if no inbound links exist.
+</ResponseField>
+
+```typescript
+const inbound = await Zotero.BetterNotes.api.relation.getNoteLinkInboundRelation(12345);
+for (const link of inbound) {
+  const sourceNote = Zotero.Items.getByLibraryAndKey(link.fromLibID, link.fromKey);
+  console.log(`Linked from: ${sourceNote?.getNoteTitle()} at line ${link.fromLine}`);
+}
+```
+
+---
+
+## `getNoteLinkOutboundRelation`
+
+Returns all `LinkModel` records for links that originate **from** the given note — i.e., all `zotero://note/` links found in this note's content.
+
+```typescript
+async function getNoteLinkOutboundRelation(noteID: number): Promise<LinkModel[]>
+```
+
+<ParamField path="noteID" type="number" required>
+  The numeric item ID of the note to query.
+</ParamField>
+
+<ResponseField name="return" type="Promise<LinkModel[]>">
+  Array of link records where `fromKey` matches the note's key. Returns an empty array if the note contains no outbound note links.
+</ResponseField>
+
+```typescript
+const outbound = await Zotero.BetterNotes.api.relation.getNoteLinkOutboundRelation(12345);
+for (const link of outbound) {
+  const targetNote = Zotero.Items.getByLibraryAndKey(link.toLibID, link.toKey);
+  console.log(`Links to: ${targetNote?.getNoteTitle()} (${link.url})`);
+}
+```
+
+---
+
+## `updateNoteLinkRelation`
+
+Scans the content of the given note, rebuilds its outbound link index in the relation worker, and fires a `"updateBNRelation"` Zotero notifier event for all affected notes (the updated note and any notes whose inbound link set changed).
+
+```typescript
+async function updateNoteLinkRelation(noteID: number): Promise<void>
+```
+
+<ParamField path="noteID" type="number" required>
+  The numeric item ID of the note whose relation data should be refreshed.
+</ParamField>
+
+```typescript
+// After modifying a note's content via the API, refresh its relation graph
+const noteItem = Zotero.Items.get(12345);
+await Zotero.BetterNotes.api.note.insert(noteItem, `<p><a href="${link}">See also</a></p>`);
+await Zotero.BetterNotes.api.relation.updateNoteLinkRelation(12345);
+```
+
+<Note>
+The notifier event `"updateBNRelation"` is fired on `"item"` objects. You can observe it with `Zotero.Notifier.registerObserver` to react to relation changes in your plugin.
+</Note>
+
+---
+
+## Annotation model
+
+Annotation-to-note link functions use `AnnotationModel` objects:
+
+```typescript
+interface AnnotationModel {
+  fromLibID: number;  // Library ID of the annotation's parent item
+  fromKey: string;    // Item key of the annotation
+  toLibID: number;    // Library ID of the linked note
+  toKey: string;      // Item key of the linked note
+  url: string;        // The zotero://note/ URL that the annotation targets
+}
+```
+
+---
+
+## `linkAnnotationToTarget`
+
+Stores a link from a PDF annotation to a note target. Both the annotation and the note are identified by their library ID and item key within the `AnnotationModel`.
+
+```typescript
+async function linkAnnotationToTarget(model: AnnotationModel): Promise<void>
+```
+
+<ParamField path="model" type="AnnotationModel" required>
+  The annotation-to-note mapping to store.
+</ParamField>
+
+```typescript
+await Zotero.BetterNotes.api.relation.linkAnnotationToTarget({
+  fromLibID: 1,
+  fromKey: "ANNOTKEY1",
+  toLibID: 1,
+  toKey: "NOTEKEY12",
+  url: "zotero://note/u/NOTEKEY12/",
+});
+```
+
+---
+
+## `getLinkTargetByAnnotation`
+
+Looks up the stored `AnnotationModel` for a given annotation, identified by its library ID and item key.
+
+```typescript
+async function getLinkTargetByAnnotation(
+  fromLibID: number,
+  fromKey: string,
+): Promise<AnnotationModel | undefined>
+```
+
+<ParamField path="fromLibID" type="number" required>
+  Library ID of the annotation item.
+</ParamField>
+
+<ParamField path="fromKey" type="string" required>
+  Item key of the annotation.
+</ParamField>
+
+<ResponseField name="return" type="Promise<AnnotationModel | undefined>">
+  The stored annotation model, or `undefined` if no link has been registered for this annotation.
+</ResponseField>
+
+```typescript
+const model = await Zotero.BetterNotes.api.relation.getLinkTargetByAnnotation(
+  1,
+  "ANNOTKEY1",
+);
+if (model) {
+  console.log(`Annotation links to note key: ${model.toKey}`);
+}
+```
+
+---
+
+## `getAnnotationByLinkTarget`
+
+Finds the annotation that was linked to a specific note target, identified by the target note's library ID and item key.
+
+```typescript
+async function getAnnotationByLinkTarget(
+  toLibID: number,
+  toKey: string,
+): Promise<AnnotationModel | undefined>
+```
+
+<ParamField path="toLibID" type="number" required>
+  Library ID of the target note.
+</ParamField>
+
+<ParamField path="toKey" type="string" required>
+  Item key of the target note.
+</ParamField>
+
+<ResponseField name="return" type="Promise<AnnotationModel | undefined>">
+  The stored annotation model, or `undefined` if no annotation has been linked to this note.
+</ResponseField>
+
+```typescript
+// Find which annotation links to a given note
+const noteItem = Zotero.Items.get(12345);
+const model = await Zotero.BetterNotes.api.relation.getAnnotationByLinkTarget(
+  noteItem.libraryID,
+  noteItem.key,
+);
+if (model) {
+  const annotation = Zotero.Items.getByLibraryAndKey(model.fromLibID, model.fromKey);
+  console.log(`Linked from annotation: ${annotation?.key}`);
+}
+```

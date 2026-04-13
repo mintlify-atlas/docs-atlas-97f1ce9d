@@ -1,97 +1,67 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Better Notes for Zotero: All-in-one note management"
+description: "Better Notes is a Zotero plugin that transforms your note-taking workflow with linking, templates, Markdown sync, and multi-format export."
 ---
 
-## Setting up
+Better Notes (BN) is a powerful plugin for [Zotero](https://www.zotero.org) that brings a complete note management system to your research workflow. Whether you're reading papers, annotating PDFs, or building a knowledge base, Better Notes connects all your ideas in one place — without leaving Zotero.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Download and install the Better Notes .xpi plugin for Zotero in under a minute
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Start taking notes, linking knowledge, and exporting content in 5 minutes
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Core Features" icon="star" href="/features/note-editor">
+    Explore the note editor, linking, templates, Markdown sync, and export formats
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Build integrations with the Better Notes plugin API for Zotero developers
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What Better Notes can do
 
-Everything you need to create world-class documentation.
+Better Notes streamlines every stage of your research workflow — from first reading to final export.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<CardGroup cols={2}>
+  <Card title="Note editor" icon="pen-to-square" href="/features/note-editor">
+    Magic Key command palette, outline view, note link preview, and direct Markdown paste
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="Note linking" icon="link" href="/features/note-linking">
+    Connect knowledge fragments with bidirectional note links and a visual relation graph
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card title="Note templates" icon="file-code" href="/features/note-templates">
+    Automate metadata extraction, paper summaries, and content generation with JavaScript templates
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+  <Card title="Markdown sync" icon="arrows-rotate" href="/features/markdown-sync">
+    Two-way sync between Zotero notes and external Markdown files — works with Obsidian
   </Card>
-</Columns>
+  <Card title="Export" icon="file-export" href="/features/export">
+    Export notes to Markdown, DOCX, PDF, LaTeX, and FreeMind mind map formats
+  </Card>
+  <Card title="Plugin API" icon="plug" href="/api/overview">
+    Programmatic access to notes, templates, sync, conversion, and editor operations
+  </Card>
+</CardGroup>
 
-## Need inspiration?
+## Get started in minutes
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Install Better Notes">
+    Download the `.xpi` file from the [latest release](https://github.com/windingwind/zotero-better-notes/releases/latest) and install it through **Tools → Plugins** in Zotero.
+  </Step>
+  <Step title="Open a note tab">
+    Double-click any note in your Zotero library to open it in a full tab with the outline panel, editor, and context pane.
+  </Step>
+  <Step title="Create note links">
+    Click the Better Notes icon in the editor title bar to link related notes together, building a connected knowledge graph.
+  </Step>
+  <Step title="Sync with Markdown">
+    Click **Set Auto-Sync** when exporting a note to keep it automatically synced with an external Markdown file for use with Obsidian or any Markdown editor.
+  </Step>
+</Steps>
+
+<Note>
+  Better Notes targets Zotero 8 and 9. Make sure you are running a compatible version before installing.
+</Note>

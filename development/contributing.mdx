@@ -1,0 +1,94 @@
+---
+title: "Contribute to Better Notes for Zotero"
+description: "Learn how to contribute code, report bugs, request features, and share note templates with the Better Notes for Zotero open-source community."
+---
+
+Better Notes for Zotero is an open-source project and welcomes contributions of all kinds — from bug reports and feature ideas to code patches and community note templates. This page explains the different ways you can get involved and how to do each one effectively.
+
+## Ways to contribute
+
+<CardGroup cols={2}>
+  <Card title="Report a bug" icon="bug" href="https://github.com/windingwind/zotero-better-notes/issues">
+    Open an issue on GitHub with reproduction steps and your Zotero version.
+  </Card>
+  <Card title="Request a feature" icon="lightbulb" href="https://github.com/windingwind/zotero-better-notes/issues">
+    Suggest improvements or new functionality via GitHub Issues.
+  </Card>
+  <Card title="Share a template" icon="file-code" href="https://github.com/windingwind/zotero-better-notes/discussions/categories/note-templates">
+    Post your note templates in the community Discussions section.
+  </Card>
+  <Card title="Contribute code" icon="code" href="https://github.com/windingwind/zotero-better-notes">
+    Fork the repository, make changes, and open a pull request.
+  </Card>
+</CardGroup>
+
+## Reporting bugs
+
+If you find a bug, open an issue on the [GitHub Issues page](https://github.com/windingwind/zotero-better-notes/issues). Include the following in your report:
+
+- A clear description of the problem
+- Steps to reproduce the issue
+- Your Zotero version and operating system
+- Any relevant error messages or screenshots
+
+<Tip>
+  Search existing issues before opening a new one — someone may have already reported the same problem or found a workaround.
+</Tip>
+
+## Requesting features
+
+Feature requests are also tracked on [GitHub Issues](https://github.com/windingwind/zotero-better-notes/issues). Describe the use case you have in mind and why the feature would be useful. Concrete examples help maintainers understand and prioritize requests.
+
+## Sharing note templates
+
+The community shares and discusses note templates in the [GitHub Discussions — Note Templates](https://github.com/windingwind/zotero-better-notes/discussions/categories/note-templates) category. If you have written a template you find useful, posting it there helps other users and demonstrates real-world plugin use cases.
+
+## Joining the community
+
+You can join the Better Notes community on Telegram at [@bnzotero](https://t.me/boost/bnzotero) to ask questions, share ideas, and stay up to date with plugin news.
+
+## Contributing code
+
+Code contributions are made through GitHub pull requests. The project is written in TypeScript and built on the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
+
+<Steps>
+  <Step title="Fork the repository">
+    Go to [github.com/windingwind/zotero-better-notes](https://github.com/windingwind/zotero-better-notes) and click **Fork** to create your own copy.
+  </Step>
+  <Step title="Set up your development environment">
+    Clone your fork locally and follow the setup instructions on the [building page](/development/building) to install dependencies and run the plugin in development mode.
+  </Step>
+  <Step title="Create a branch">
+    Create a descriptive branch name for your change:
+
+    ```bash
+    git checkout -b fix/note-sync-conflict
+    ```
+  </Step>
+  <Step title="Make your changes">
+    Edit the source code in `src/`. Run the linter before committing to keep code style consistent:
+
+    ```bash
+    npm run lint
+    ```
+  </Step>
+  <Step title="Open a pull request">
+    Push your branch to your fork and open a pull request against the `main` branch. Describe what you changed and why. Reference any related issues using `Closes #123` syntax.
+  </Step>
+</Steps>
+
+<Note>
+  For significant changes — new features, API changes, or architectural decisions — consider opening an issue to discuss your approach before writing code. This avoids duplicated effort and increases the chance your pull request is accepted.
+</Note>
+
+## Code style
+
+The project uses [Prettier](https://prettier.io) and [ESLint](https://eslint.org) for consistent formatting. Run `npm run lint` to auto-fix style issues before committing. The linter runs automatically as part of the release process.
+
+## License
+
+Better Notes for Zotero is licensed under the [AGPL-3.0-or-later](https://github.com/windingwind/zotero-better-notes/blob/main/LICENSE) license. By contributing code, you agree that your contributions will be distributed under the same license.
+
+## Code of conduct
+
+Please be respectful in all project spaces — issues, pull requests, discussions, and the Telegram group. Constructive feedback is welcome; harassment is not.

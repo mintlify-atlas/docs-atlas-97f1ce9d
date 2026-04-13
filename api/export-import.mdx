@@ -1,0 +1,363 @@
+---
+title: "Export and Import API — Better Notes"
+description: "Reference for the Better Notes export and import modules: save notes as Markdown, DOCX, PDF, FreeMind, or LaTeX, and import Markdown files as Zotero notes."
+---
+
+The `$export` and `$import` modules provide programmatic access to all of Better Notes' file export and import functionality. Export functions write files to a given path and show a hint notification on success. Import functions read a Markdown file, parse it, and write the result into a new or existing Zotero note item.
+
+<Note>
+All export functions accept `filename` (an absolute path) and `noteId` (a numeric item ID). They do not open file-picker dialogs — that is handled by the higher-level `exportNotes` orchestration function in the same module.
+</Note>
+
+---
+
+## Export (`$export`)
+
+### `exportNotes`
+
+High-level export orchestration. Accepts an array of note items and an options object that selects which output formats to produce. Can optionally open file pickers for the user to choose destinations, or accept a pre-configured `syncDir`.
+
+```typescript
+async function exportNotes(
+  noteItems: Zotero.Item[],
+  options: {
+    embedLink?: boolean;
+    standaloneLink?: boolean;
+    exportNote?: boolean;
+    exportMD?: boolean;
+    setAutoSync?: boolean;
+    autoMDFileName?: boolean;
+    syncDir?: string;
+    withYAMLHeader?: boolean;
+    exportDocx?: boolean;
+    exportPDF?: boolean;
+    exportFreeMind?: boolean;
+    exportLatex?: boolean;
+    mergeLatex?: boolean;
+  },
+): Promise<void>
+```
+
+<ParamField path="noteItems" type="Zotero.Item[]" required>
+  The note items to export.
+</ParamField>
+
+<ParamField path="options.embedLink" type="boolean">
+  Expand all `zotero://note/` links by embedding the linked note content inline before exporting. A temporary copy of the note is used; the original is not modified.
+</ParamField>
+
+<ParamField path="options.standaloneLink" type="boolean">
+  Recursively collect all notes linked from `noteItems` and include them in the export.
+</ParamField>
+
+<ParamField path="options.exportNote" type="boolean">
+  Open each (optionally link-embedded) note in a Zotero note window after export.
+</ParamField>
+
+<ParamField path="options.exportMD" type="boolean">
+  Export as Markdown. Pair with `setAutoSync` to register the file for ongoing sync, or use `autoMDFileName` to auto-generate filenames.
+</ParamField>
+
+<ParamField path="options.setAutoSync" type="boolean">
+  Register the exported notes for auto-sync. Opens a folder picker and sets `syncDir`.
+</ParamField>
+
+<ParamField path="options.autoMDFileName" type="boolean">
+  Use the `[ExportMDFileNameV2]` template to generate filenames automatically. Opens a folder picker.
+</ParamField>
+
+<ParamField path="options.withYAMLHeader" type="boolean">
+  Include a YAML front-matter header in exported Markdown files.
+</ParamField>
+
+<ParamField path="options.exportDocx" type="boolean">
+  Export as Microsoft Word `.docx` (opens a save dialog for each note).
+</ParamField>
+
+<ParamField path="options.exportPDF" type="boolean">
+  Export as PDF via the browser print pipeline (opens the print dialog).
+</ParamField>
+
+<ParamField path="options.exportFreeMind" type="boolean">
+  Export as a FreeMind `.mm` mind map (opens a save dialog for each note).
+</ParamField>
+
+<ParamField path="options.exportLatex" type="boolean">
+  Export as LaTeX. Requires Better BibTeX for Zotero if citations are present.
+</ParamField>
+
+<ParamField path="options.mergeLatex" type="boolean">
+  When `exportLatex` is `true` and multiple notes are being exported, merge them into a single `.tex` file.
+</ParamField>
+
+```typescript
+// Export selected notes as Markdown with YAML headers, registering them for sync
+const selectedNotes = Zotero.getMainWindow().ZoteroPane.getSelectedItems()
+  .filter((item) => item.isNote());
+
+await Zotero.BetterNotes.api.$export.exportNotes(selectedNotes, {
+  exportMD: true,
+  setAutoSync: true,
+  withYAMLHeader: true,
+});
+```
+
+---
+
+### `saveMD`
+
+Saves a note as a Markdown file at the given path. Creates the output directory and any configured attachments sub-folder as needed.
+
+```typescript
+async function saveMD(
+  filename: string,
+  noteId: number,
+  options?: {
+    keepNoteLink?: boolean;
+    withYAMLHeader?: boolean;
+  },
+): Promise<void>
+```
+
+<ParamField path="filename" type="string" required>
+  Absolute path of the output `.md` file.
+</ParamField>
+
+<ParamField path="noteId" type="number" required>
+  Numeric item ID of the note to export.
+</ParamField>
+
+<ParamField path="options.keepNoteLink" type="boolean">
+  Preserve `zotero://note/` links instead of converting them to relative file paths.
+</ParamField>
+
+<ParamField path="options.withYAMLHeader" type="boolean">
+  Prepend a YAML front-matter header.
+</ParamField>
+
+```typescript
+await Zotero.BetterNotes.api.$export.saveMD(
+  "/Users/you/notes/My Note-ABCDEFG.md",
+  12345,
+  { withYAMLHeader: true },
+);
+```
+
+---
+
+### `syncMDBatch`
+
+Batch-syncs multiple notes to Markdown files in the same directory. Updates the sync status record for each note after writing.
+
+```typescript
+async function syncMDBatch(
+  saveDir: string,
+  noteIds: number[],
+  metaList?: Record<string, any>[],
+): Promise<void>
+```
+
+<ParamField path="saveDir" type="string" required>
+  Absolute path of the output directory.
+</ParamField>
+
+<ParamField path="noteIds" type="number[]" required>
+  Array of numeric note item IDs to sync.
+</ParamField>
+
+<ParamField path="metaList" type="Record<string, any>[]">
+  Optional array of cached YAML header objects, one per note in `noteIds`. Used to preserve user-added YAML fields.
+</ParamField>
+
+```typescript
+const noteIds = [12345, 12346, 12347];
+await Zotero.BetterNotes.api.$export.syncMDBatch("/Users/you/notes", noteIds);
+```
+
+---
+
+### `saveDocx`
+
+Saves a note as a Microsoft Word `.docx` file. Citations are converted to Zotero Word field codes that can be refreshed from Word/LibreOffice.
+
+```typescript
+async function saveDocx(filename: string, noteId: number): Promise<void>
+```
+
+<ParamField path="filename" type="string" required>
+  Absolute path of the output `.docx` file.
+</ParamField>
+
+<ParamField path="noteId" type="number" required>
+  Numeric item ID of the note to export.
+</ParamField>
+
+```typescript
+await Zotero.BetterNotes.api.$export.saveDocx(
+  "/Users/you/documents/My Note.docx",
+  12345,
+);
+```
+
+<Info>
+Citation fields in the exported `.docx` contain placeholder text with the instruction to click Zotero → Refresh in Word or LibreOffice to update them.
+</Info>
+
+---
+
+### `savePDF`
+
+Saves a note as a PDF by printing it through a hidden browser. Zotero's print header and footer preferences are temporarily cleared before printing.
+
+```typescript
+async function savePDF(noteId: number): Promise<void>
+```
+
+<ParamField path="noteId" type="number" required>
+  Numeric item ID of the note to export.
+</ParamField>
+
+<Note>
+`savePDF` opens the operating system print dialog because it relies on the browser print pipeline. There is no `filename` parameter — the user selects the output path in the print dialog.
+</Note>
+
+---
+
+### `saveFreeMind`
+
+Saves a note as a FreeMind XML `.mm` mind map. The heading hierarchy of the note becomes the node structure of the map, with note content as rich-text annotations.
+
+```typescript
+async function saveFreeMind(filename: string, noteId: number): Promise<void>
+```
+
+<ParamField path="filename" type="string" required>
+  Absolute path of the output `.mm` file.
+</ParamField>
+
+<ParamField path="noteId" type="number" required>
+  Numeric item ID of the note to export.
+</ParamField>
+
+---
+
+### `saveLatex`
+
+Saves a note as a LaTeX `.tex` file. If citations are present and Better BibTeX for Zotero is installed, a `.bib` file is also generated and a second save dialog is opened for it.
+
+```typescript
+async function saveLatex(
+  filename: string,
+  noteId: number,
+  options?: {
+    keepNoteLink?: boolean;
+  },
+): Promise<void>
+```
+
+<ParamField path="filename" type="string" required>
+  Absolute path of the output `.tex` file.
+</ParamField>
+
+<ParamField path="noteId" type="number" required>
+  Numeric item ID of the note to export.
+</ParamField>
+
+<ParamField path="options.keepNoteLink" type="boolean">
+  Preserve `zotero://note/` links in the LaTeX output.
+</ParamField>
+
+---
+
+### `saveMergedLatex`
+
+Merges multiple notes into a single LaTeX file, separating each note's content with blank lines. A combined `.bib` file is generated if citations are present.
+
+```typescript
+async function saveMergedLatex(filename: string, noteIds: number[]): Promise<void>
+```
+
+<ParamField path="filename" type="string" required>
+  Absolute path of the merged output `.tex` file.
+</ParamField>
+
+<ParamField path="noteIds" type="number[]" required>
+  Array of numeric note item IDs to merge, in order.
+</ParamField>
+
+```typescript
+await Zotero.BetterNotes.api.$export.saveMergedLatex(
+  "/Users/you/thesis/chapters.tex",
+  [12345, 12346, 12347],
+);
+```
+
+---
+
+## Import (`$import`)
+
+### `fromMD`
+
+Imports a Markdown file as a Zotero note. If `noteId` is provided, the content is written into that existing note; otherwise a new note is created. When `append` is `true`, the parsed content is appended at `appendLineIndex` rather than replacing the note.
+
+```typescript
+async function fromMD(
+  filepath: string,
+  options?: {
+    noteId?: number;
+    ignoreVersion?: boolean;
+    append?: boolean;
+    appendLineIndex?: number;
+  },
+): Promise<Zotero.Item | undefined>
+```
+
+<ParamField path="filepath" type="string" required>
+  Absolute path of the `.md` file to import.
+</ParamField>
+
+<ParamField path="options.noteId" type="number">
+  ID of an existing note to overwrite or append to. If absent, a new note is created.
+</ParamField>
+
+<ParamField path="options.ignoreVersion" type="boolean">
+  Skip the version check that warns when the Markdown file is older than the target note. Defaults to `false`.
+</ParamField>
+
+<ParamField path="options.append" type="boolean">
+  Append the imported content rather than replacing the note. Defaults to `false`.
+</ParamField>
+
+<ParamField path="options.appendLineIndex" type="number">
+  Line index at which to append when `append` is `true`. Defaults to `-1` (end of note).
+</ParamField>
+
+<ResponseField name="return" type="Promise<Zotero.Item | undefined>">
+  The created or updated note item, or `undefined` if the import was cancelled or failed.
+</ResponseField>
+
+```typescript
+// Create a new note from a Markdown file
+const noteItem = await Zotero.BetterNotes.api.$import.fromMD(
+  "/Users/you/notes/research.md",
+);
+if (noteItem) {
+  console.log(`Imported as note #${noteItem.id}`);
+}
+
+// Overwrite an existing note
+await Zotero.BetterNotes.api.$import.fromMD(
+  "/Users/you/notes/research.md",
+  { noteId: 12345 },
+);
+
+// Append to an existing note at line 10
+await Zotero.BetterNotes.api.$import.fromMD(
+  "/Users/you/notes/appendix.md",
+  { noteId: 12345, append: true, appendLineIndex: 10 },
+);
+```
+
+<Warning>
+If the Markdown file's `$version` front-matter field is lower than the target note's version, a confirmation dialog is shown before proceeding. Set `ignoreVersion: true` to suppress this dialog.
+</Warning>

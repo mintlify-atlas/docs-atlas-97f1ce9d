@@ -1,0 +1,265 @@
+---
+title: "Write custom note templates in Better Notes"
+description: "Complete guide to writing Item and Text note templates with JavaScript, pragma directives, and sharing your templates with the community."
+---
+
+Note templates in Better Notes let you generate structured, data-rich notes from your Zotero library automatically. You can combine Markdown or HTML with JavaScript expressions to pull item metadata, loop over multiple items, and produce consistent output every time.
+
+## Template structure
+
+Every template has two parts:
+
+- **Name** — must start with `[TYPE]`, where `TYPE` is the template type. Examples: `[Item] Paper Summary`, `[Text] Current Time`.
+- **Content** — the template code: Markdown or HTML with optional JavaScript expressions.
+
+<Tip>You can find and share community templates in the [Better Notes Discussions](https://github.com/windingwind/zotero-better-notes/discussions/categories/note-templates).</Tip>
+
+## Pragma directives
+
+Pragmas are lines starting with `// @`. They control how the template is compiled and will not appear in the rendered output.
+
+<AccordionGroup>
+  <Accordion title="// @use-markdown">
+    Tells the compiler to treat the template content as Markdown and convert it to rich text. Without this pragma the template is processed as HTML.
+
+    ```js
+    // @use-markdown
+    # ${topItem.getField("title")}
+    ```
+  </Accordion>
+
+  <Accordion title="// @use-refresh">
+    Allows the generated content to be updated later using **Update content from templates** in the note editor. The rendered output is wrapped in separators with a YAML metadata section so Better Notes knows which template to re-run.
+
+    <Warning>Templates with `// @use-refresh` must not contain any horizontal rule (`---` or `<hr>`) in their content. Because the first line of the output is a separator, notes generated from these templates will have a blank title — see the [linked issue](https://github.com/windingwind/zotero-better-notes/issues/1247#issuecomment-2573739339) for a workaround.</Warning>
+  </Accordion>
+
+  <Accordion title="// @author">
+    Marks the template as belonging to you. Use your GitHub username or email.
+
+    ```js
+    // @author your-github-username
+    ```
+  </Accordion>
+
+  <Accordion title="// @link">
+    A URL pointing to where the template is published, so users can contact you and give feedback.
+
+    ```js
+    // @link https://github.com/windingwind/zotero-better-notes/discussions/123
+    ```
+  </Accordion>
+
+  <Accordion title="// @${stage}-begin and // @${stage}-end">
+    Wraps a block of content so it is only processed during a specific stage of an Item template. Replace `${stage}` with `beforeloop`, `default`, or `afterloop`.
+
+    ```js
+    // @beforeloop-begin
+    // @use-markdown
+    # Summary report
+    // @beforeloop-end
+    // @default-begin
+    ## ${topItem.getField("title")}
+    // @default-end
+    ```
+
+    If no stage pragma is present, the entire template runs as the `default` stage.
+  </Accordion>
+</AccordionGroup>
+
+## Template types
+
+<Tabs>
+  <Tab title="Item template">
+    Item templates process one or more Zotero items. Items are selected from the item picker or from the current library selection.
+
+    An Item template has three stages that run in order:
+
+    | Stage | When it runs | Available variables |
+    |-------|-------------|---------------------|
+    | `beforeloop` | Once, before the item loop | `items`, `targetNoteItem`, `copyNoteImage`, `sharedObj` |
+    | `default` | Once per item | `topItem`, `targetNoteItem`, `itemNotes` (deprecated), `copyNoteImage`, `sharedObj` |
+    | `afterloop` | Once, after the item loop | `items`, `targetNoteItem`, `copyNoteImage`, `sharedObj` |
+
+    - **`topItem`** — the current Zotero item being processed
+    - **`items`** — the full array of input items
+    - **`targetNoteItem`** — the note that will receive the rendered output; `undefined` in preview mode
+    - **`copyNoteImage(noteItem)`** — call this when your template references content from another note to ensure images are copied across
+    - **`sharedObj`** — a plain object shared across all three stages, useful for passing data between them
+
+    ```yaml
+    name: "[Item] Example Item Template"
+    content: |-
+      // @beforeloop-begin
+      // @use-markdown
+      # Hi! This only renders once
+      // @beforeloop-end
+      // @default-begin
+      <p>Title: <span style="color: #ffcb00">${topItem.getField("title")}</span></p>
+      // @default-end
+      // @afterloop-begin
+      > Done!
+      // @afterloop-end
+    ```
+  </Tab>
+
+  <Tab title="Text template">
+    Text templates are general-purpose templates that run once and do not iterate over items.
+
+    **Available variables:**
+
+    - **`targetNoteItem`** — the note that will receive the rendered output
+    - **`sharedObj`** — a plain object for temporary variables
+
+    ```yaml
+    name: "[Text] Current Time"
+    content: |-
+      // @use-markdown
+      **Current Time**: ${new Date().toLocaleString()}
+    ```
+  </Tab>
+</Tabs>
+
+## Script syntax
+
+Templates support JavaScript in two forms.
+
+### One-line expressions
+
+Wrap a single expression in `${ }`. The expression is evaluated and its result is inserted inline.
+
+```js
+${new Date().toLocaleString()}
+```
+
+### Multi-line functions
+
+Wrap multiple lines in `${{ }}$`. Use `return` to produce the inserted value.
+
+```js
+${{
+  const a = 1;
+  const b = 2;
+  return a + b;
+}}$
+```
+
+Multi-line blocks run as `async` functions, so you can use `await` inside them.
+
+## Common script snippets
+
+All of the following snippets are scoped to the `default` stage of an Item template and use `topItem`.
+
+<CodeGroup>
+
+```js Get tags
+${topItem.getTags().map(tagObj=>tagObj.tag)}
+```
+
+```js Get title
+${topItem.getField("title")}
+```
+
+```js Get authors
+${topItem.getCreators().map((au) => au.firstName + " " + au.lastName).join("; ")}
+```
+
+```js Get publication date
+${topItem.getField("date")}
+```
+
+```js Get DOI with link
+[${topItem.getField("DOI")}]("https://doi.org/${topItem.getField('DOI')}")
+```
+
+```js Get citation key
+${topItem.citationKey ? topItem.citationKey : ""}
+```
+
+</CodeGroup>
+
+For a full list of field keys, refer to the [Zotero type map](https://aurimasv.github.io/z2csl/typeMap.xml).
+
+### Multi-line example: PDF link
+
+```js
+${{
+  async function getPDFLink(item) {
+    const att = await item.getBestAttachment();
+    if (!att || !att.isPDFAttachment()) {
+      return "";
+    }
+    const key = att.key;
+    if (att.libraryID === 1) {
+      return `zotero://open/library/items/${key}`;
+    } else {
+      const groupID = Zotero.Libraries.get(att.libraryID).id;
+      return `zotero://open/groups/${groupID}/items/${key}`;
+    }
+  }
+  sharedObj.getPDFLink = getPDFLink;
+  return await getPDFLink(topItem);
+}}$
+```
+
+Storing the function on `sharedObj` lets you reuse it in later stages of the same template.
+
+## The `_env` global
+
+Every template receives a `_env` global:
+
+```js
+_env = { dryRun: boolean }
+```
+
+When you preview a template in the template editor, `_env.dryRun` is `true`. In that case your template **must not modify the Zotero library** — no saving items, no writing notes.
+
+## Sharing templates
+
+<Steps>
+  <Step title="Open the template editor">
+    In Zotero, go to **Tools** → **Note Template Editor**.
+  </Step>
+  <Step title="Select your template">
+    Click the template you want to share in the template list on the left.
+  </Step>
+  <Step title="Copy the share code">
+    Click **Options** → **Copy share code**. This copies the template in the shareable format to your clipboard.
+  </Step>
+  <Step title="Post the template">
+    Paste the share code in a new post in the [Note Templates discussion category](https://github.com/windingwind/zotero-better-notes/discussions/categories/note-templates).
+  </Step>
+</Steps>
+
+The share code uses YAML format by default:
+
+```yaml
+# Import via: Tools → New Template from Clipboard
+name: "[TYPE] TEMPLATE NAME"
+content: |-
+  // @author YOUR NAME
+  // @link PUBLISH PAGE URL
+  TEMPLATE CONTENT HERE
+```
+
+JSON format is also accepted:
+
+```json
+{
+  "name": "[TYPE] TEMPLATE NAME",
+  "content": "// @author YOUR NAME\n// @link PUBLISH PAGE URL\nTEMPLATE CONTENT HERE"
+}
+```
+
+To import a shared template, copy the YAML or JSON block and go to **Tools** → **New Template from Clipboard** in Zotero.
+
+## Related guides
+
+<CardGroup cols={2}>
+  <Card title="Workflow automation" icon="robot" href="/guides/workflow-automation">
+    Auto-generate notes from templates when items are added.
+  </Card>
+  <Card title="Obsidian integration" icon="refresh-cw" href="/guides/obsidian-integration">
+    Sync your generated notes to Markdown files.
+  </Card>
+</CardGroup>

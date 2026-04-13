@@ -1,0 +1,348 @@
+---
+title: "Template API — Better Notes for Zotero"
+description: "Reference for the Better Notes template module: run, manage, and preview note templates programmatically, with built-in system templates and custom user templates."
+---
+
+The template module lets you run note templates, manage the template library, and render previews — all programmatically. Templates are stored in Zotero preferences and can be of three types: **Text** templates (run once per invocation), **Item** templates (run once per library item), and **system** templates (built-in templates used internally by Better Notes). Template code is JavaScript template literals evaluated with `AsyncFunction`, so templates can `await` any Zotero or Better Notes API call.
+
+<Info>
+Template names that appear in `SYSTEM_TEMPLATE_NAMES` (e.g. `[QuickInsertV3]`) are reserved. Deleting them via `removeTemplate` removes your custom version; Better Notes will fall back to the built-in default.
+</Info>
+
+## `runTemplate`
+
+Executes any named template by key and returns the rendered string. This is the lowest-level execution function — it accepts an arbitrary argument string and list, making it suitable for custom invocations.
+
+```typescript
+async function runTemplate(
+  key: string,
+  argString?: string,
+  argList?: any[],
+  options?: {
+    useDefault?: boolean;
+    dryRun?: boolean;
+    stage?: string;
+  },
+): Promise<string>
+```
+
+<ParamField path="key" type="string" required>
+  The template name (e.g. `"[QuickInsertV3]"` or your custom template name).
+</ParamField>
+
+<ParamField path="argString" type="string">
+  Comma-separated parameter names that match the entries in `argList` (e.g. `"noteItem, sharedObj"`). Defaults to `""`.
+</ParamField>
+
+<ParamField path="argList" type="any[]">
+  Values corresponding to the parameters in `argString`. Defaults to `[]`.
+</ParamField>
+
+<ParamField path="options.useDefault" type="boolean">
+  Fall back to the built-in default template if no custom version is stored. Defaults to `true`.
+</ParamField>
+
+<ParamField path="options.dryRun" type="boolean">
+  If `true`, errors are returned as a string instead of showing an alert. Defaults to `false`.
+</ParamField>
+
+<ParamField path="options.stage" type="string">
+  Execute only the named stage block (delimited by `// @stage-begin` / `// @stage-end` pragmas). Defaults to `"default"`.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  The rendered template output as an HTML string (or plain string for `// @use-markdown` templates, which are automatically converted to HTML).
+</ResponseField>
+
+```typescript
+// Run a custom template that accepts a noteItem argument
+const html = await Zotero.BetterNotes.api.template.runTemplate(
+  "My Custom Template",
+  "noteItem",
+  [Zotero.Items.get(12345)],
+);
+```
+
+---
+
+## `runTextTemplate`
+
+Runs a Text-type template, providing `targetNoteItem` and a `sharedObj` as arguments. If the template contains the `// @use-refresh` pragma, the output is wrapped in a YAML metadata block so the content can be refreshed later.
+
+```typescript
+async function runTextTemplate(
+  key: string,
+  options?: {
+    targetNoteId?: number;
+    dryRun?: boolean;
+  },
+): Promise<string>
+```
+
+<ParamField path="key" type="string" required>
+  The template name.
+</ParamField>
+
+<ParamField path="options.targetNoteId" type="number">
+  ID of the note that will receive the output. Made available inside the template as `targetNoteItem`.
+</ParamField>
+
+<ParamField path="options.dryRun" type="boolean">
+  Preview mode — errors return as strings instead of showing an alert.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  Rendered HTML string.
+</ResponseField>
+
+---
+
+## `runItemTemplate`
+
+Runs an Item-type template. The template is executed in three stages:
+
+1. **`beforeloop`** — receives `items`, `targetNoteItem`, `copyNoteImage`, `sharedObj`
+2. **`default`** — executed once per item, receives `topItem`, `targetNoteItem`, `itemNotes`, `copyNoteImage`, `sharedObj`
+3. **`afterloop`** — receives `items`, `targetNoteItem`, `copyNoteImage`, `sharedObj`
+
+If `itemIds` is not provided, the function prompts the user to select items from the library.
+
+```typescript
+async function runItemTemplate(
+  key: string,
+  options?: {
+    itemIds?: number[];
+    targetNoteId?: number;
+    dryRun?: boolean;
+  },
+): Promise<string>
+```
+
+<ParamField path="key" type="string" required>
+  The template name.
+</ParamField>
+
+<ParamField path="options.itemIds" type="number[]">
+  IDs of the items to process. If absent, the user is prompted to choose.
+</ParamField>
+
+<ParamField path="options.targetNoteId" type="number">
+  ID of the note that will receive the output.
+</ParamField>
+
+<ParamField path="options.dryRun" type="boolean">
+  Preview mode.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  Rendered HTML string from all three stages concatenated.
+</ResponseField>
+
+```typescript
+// Run an item template against specific library items
+const html = await Zotero.BetterNotes.api.template.runItemTemplate(
+  "[Item] My Reading Notes",
+  {
+    itemIds: [1001, 1002, 1003],
+    targetNoteId: 12345,
+  },
+);
+```
+
+---
+
+## `runQuickInsertTemplate`
+
+Runs the `[QuickInsertV3]` built-in template to generate a note-link insertion, with an optional position or section target. This is the same function called internally by the "Copy Note Link" command.
+
+```typescript
+async function runQuickInsertTemplate(
+  noteItem: Zotero.Item,
+  targetNoteItem: Zotero.Item | undefined,
+  options?: {
+    lineIndex?: number;
+    sectionName?: string;
+    selectionText?: string;
+    _internal?: any;
+    dryRun?: boolean;
+  },
+): Promise<string>
+```
+
+<ParamField path="noteItem" type="Zotero.Item" required>
+  The note item to generate the link for (the "source" note being linked to).
+</ParamField>
+
+<ParamField path="targetNoteItem" type="Zotero.Item | undefined" required>
+  The note item that will contain the inserted link, or `undefined`.
+</ParamField>
+
+<ParamField path="options.lineIndex" type="number">
+  Targets the link to a specific line index in `noteItem`.
+</ParamField>
+
+<ParamField path="options.sectionName" type="string">
+  Targets the link to a heading section in `noteItem`.
+</ParamField>
+
+<ParamField path="options.selectionText" type="string">
+  Selected text to use as the visible link label.
+</ParamField>
+
+<ParamField path="options._internal" type="any">
+  An optional object that will receive the generated `link` URI string as `_internal.link`. Useful for extracting the raw URI.
+</ParamField>
+
+<ParamField path="options.dryRun" type="boolean">
+  Preview mode.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  Rendered HTML for the note link (as produced by the `[QuickInsertV3]` template).
+</ResponseField>
+
+---
+
+## `getTemplateKeys`
+
+Returns the names of all stored templates (both custom and default).
+
+```typescript
+function getTemplateKeys(): string[]
+```
+
+<ResponseField name="return" type="string[]">
+  Array of template name strings.
+</ResponseField>
+
+```typescript
+const keys = Zotero.BetterNotes.api.template.getTemplateKeys();
+console.log(keys); // e.g. ["[QuickInsertV3]", "[Item] My Notes", ...]
+```
+
+---
+
+## `getTemplateText`
+
+Returns the stored source text (JavaScript template literal) for a named template. Returns an empty string if the template does not exist.
+
+```typescript
+function getTemplateText(name: string): string
+```
+
+<ParamField path="name" type="string" required>
+  The template name.
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Template source code as a string, or `""` if not found.
+</ResponseField>
+
+---
+
+## `setTemplate`
+
+Creates or overwrites a template. Pass a `NoteTemplate` object with `name` and `text` fields.
+
+```typescript
+function setTemplate(template: NoteTemplate): void
+```
+
+<ParamField path="template" type="NoteTemplate" required>
+  An object with `name: string` and `text: string` fields.
+</ParamField>
+
+```typescript
+Zotero.BetterNotes.api.template.setTemplate({
+  name: "[Text] Daily Note",
+  text: "# ${new Date().toLocaleDateString()}\n\n",
+});
+```
+
+---
+
+## `removeTemplate`
+
+Deletes a template by name. If the template name is `undefined` or the template does not exist, this is a no-op.
+
+```typescript
+function removeTemplate(keyName: string | undefined): void
+```
+
+<ParamField path="keyName" type="string | undefined" required>
+  The template name to remove.
+</ParamField>
+
+<Warning>
+Removing a system template (one in `SYSTEM_TEMPLATE_NAMES`) deletes your customisation and causes Better Notes to use the built-in default on the next run.
+</Warning>
+
+---
+
+## `renderTemplatePreview`
+
+Renders a dry-run preview of a template and returns the resulting HTML. The function automatically selects the appropriate `run*Template` function based on the template name prefix or built-in naming convention.
+
+```typescript
+async function renderTemplatePreview(
+  templateName: string,
+  inputItems?: Zotero.Item[],
+): Promise<string>
+```
+
+<ParamField path="templateName" type="string" required>
+  The name of the template to preview.
+</ParamField>
+
+<ParamField path="inputItems" type="Zotero.Item[]">
+  Items to use as input. If not provided, falls back to the current library selection.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  Rendered HTML of the preview. Returns an error message string if preview is not available for the template type.
+</ResponseField>
+
+---
+
+## `SYSTEM_TEMPLATE_NAMES`
+
+An array of the reserved built-in template names. These templates are used internally by Better Notes and cannot be permanently deleted.
+
+```typescript
+const SYSTEM_TEMPLATE_NAMES: string[]
+```
+
+Current value:
+
+```typescript
+[
+  "[QuickInsertV3]",
+  "[QuickImportV2]",
+  "[QuickNoteV5]",
+  "[ExportMDFileNameV2]",
+  "[ExportMDFileHeaderV2]",
+  "[ExportMDFileContent]",
+  "[ExportLatexFileContent]",
+]
+```
+
+---
+
+## `DEFAULT_TEMPLATES`
+
+The array of built-in default `NoteTemplate` objects. Each entry has `name` and `text` fields. These are used to initialise the template store and as the fallback when a custom version has not been saved.
+
+```typescript
+const DEFAULT_TEMPLATES: NoteTemplate[]
+```
+
+```typescript
+// List all default template names
+Zotero.BetterNotes.api.template.DEFAULT_TEMPLATES.forEach((t) => {
+  console.log(t.name);
+});
+```
+
+<Tip>
+To customise a system template, call `setTemplate` with the same name. Better Notes will always use your stored version before falling back to `DEFAULT_TEMPLATES`.
+</Tip>

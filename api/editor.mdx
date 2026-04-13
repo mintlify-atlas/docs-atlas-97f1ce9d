@@ -1,0 +1,469 @@
+---
+title: "Editor API — Better Notes for Zotero"
+description: "Complete reference for the Better Notes editor module: insert, delete, move, replace, scroll, and query content in a live ProseMirror note editor."
+---
+
+The editor module provides direct access to the ProseMirror instance that powers a note window when it is open. All mutations made through this API participate in Zotero's undo/redo history and trigger live UI updates. Positions and line indices are zero-based throughout. If you need to modify a note that may not be open, use the [Note API](/api/note) instead.
+
+<Warning>
+All functions in this module require a live `Zotero.EditorInstance`. Call `getEditorInstance` first and handle the `undefined` case before calling any other function.
+</Warning>
+
+## `getEditorInstance`
+
+Returns the ProseMirror editor instance for the note with the given ID, or `undefined` if the note is not currently open in an editor window.
+
+```typescript
+function getEditorInstance(noteId: number): Zotero.EditorInstance | undefined
+```
+
+<ParamField path="noteId" type="number" required>
+  The numeric item ID of the note.
+</ParamField>
+
+<ResponseField name="return" type="Zotero.EditorInstance | undefined">
+  The live editor instance, or `undefined` if the note is not open.
+</ResponseField>
+
+```typescript
+const editor = Zotero.BetterNotes.api.editor.getEditorInstance(12345);
+if (!editor) {
+  console.log("Note is not open in an editor.");
+}
+```
+
+---
+
+## `insert`
+
+Inserts HTML content at the specified position in the editor.
+
+```typescript
+function insert(
+  editor: Zotero.EditorInstance,
+  content: string,
+  position?: number | "end" | "start" | "cursor",
+  select?: boolean,
+): void
+```
+
+<ParamField path="editor" type="Zotero.EditorInstance" required>
+  The editor instance returned by `getEditorInstance`.
+</ParamField>
+
+<ParamField path="content" type="string">
+  HTML string to insert. Defaults to an empty string.
+</ParamField>
+
+<ParamField path="position" type="number | &quot;end&quot; | &quot;start&quot; | &quot;cursor&quot;">
+  Where to insert. Pass a numeric ProseMirror document offset, or one of the string shortcuts: `"cursor"` (default), `"start"`, or `"end"`.
+</ParamField>
+
+<ParamField path="select" type="boolean">
+  If `true`, the inserted content is selected after insertion.
+</ParamField>
+
+```typescript
+const editor = Zotero.BetterNotes.api.editor.getEditorInstance(noteId)!;
+
+// Insert at cursor
+Zotero.BetterNotes.api.editor.insert(editor, "<p>New paragraph</p>");
+
+// Insert at the start of the document
+Zotero.BetterNotes.api.editor.insert(editor, "<h2>Introduction</h2>", "start");
+
+// Insert at the end and select the new content
+Zotero.BetterNotes.api.editor.insert(editor, "<p>Summary</p>", "end", true);
+```
+
+---
+
+## `del`
+
+Deletes content between two ProseMirror document positions.
+
+```typescript
+function del(
+  editor: Zotero.EditorInstance,
+  from: number,
+  to: number,
+): void
+```
+
+<ParamField path="editor" type="Zotero.EditorInstance" required>
+  The editor instance.
+</ParamField>
+
+<ParamField path="from" type="number" required>
+  Start position (inclusive).
+</ParamField>
+
+<ParamField path="to" type="number" required>
+  End position (exclusive).
+</ParamField>
+
+```typescript
+const range = Zotero.BetterNotes.api.editor.getRangeAtCursor(editor);
+Zotero.BetterNotes.api.editor.del(editor, range.from, range.to);
+```
+
+---
+
+## `move`
+
+Moves content between two positions by a signed delta (offset). A negative delta moves content earlier in the document; a positive delta moves it later.
+
+```typescript
+function move(
+  editor: Zotero.EditorInstance,
+  from: number,
+  to: number,
+  delta: number,
+): void
+```
+
+<ParamField path="editor" type="Zotero.EditorInstance" required>
+  The editor instance.
+</ParamField>
+
+<ParamField path="from" type="number" required>
+  Start of the content range to move.
+</ParamField>
+
+<ParamField path="to" type="number" required>
+  End of the content range to move.
+</ParamField>
+
+<ParamField path="delta" type="number" required>
+  The number of positions to shift the content. Use a negative value to move upward, positive to move downward.
+</ParamField>
+
+---
+
+## `replace`
+
+Replaces the content between two positions with new text, applying a specified node type and optional mark.
+
+```typescript
+function replace(
+  editor: Zotero.EditorInstance,
+  from: number,
+  to: number,
+  text: string | undefined,
+  nodeTypeName:
+    | "doc" | "paragraph" | "heading" | "math_display" | "codeBlock"
+    | "blockquote" | "horizontalRule" | "orderedList" | "bulletList"
+    | "listItem" | "table" | "table_row" | "table_cell" | "table_header"
+    | "text" | "hardBreak" | "image" | "citation" | "highlight"
+    | "math_inline",
+  nodeAttrs: Record<string, any>,
+  markTypeName:
+    | "strong" | "em" | "underline" | "strike" | "subsup"
+    | "textColor" | "backgroundColor" | "link" | "code",
+  markAttrs: Record<string, any>,
+  select?: boolean,
+): void
+```
+
+<ParamField path="editor" type="Zotero.EditorInstance" required>
+  The editor instance.
+</ParamField>
+
+<ParamField path="from" type="number" required>
+  Start of the range to replace.
+</ParamField>
+
+<ParamField path="to" type="number" required>
+  End of the range to replace.
+</ParamField>
+
+<ParamField path="text" type="string | undefined" required>
+  The replacement text content. Pass `undefined` to create an empty node.
+</ParamField>
+
+<ParamField path="nodeTypeName" type="string" required>
+  The ProseMirror node type name for the replacement content.
+</ParamField>
+
+<ParamField path="nodeAttrs" type="Record<string, any>" required>
+  Attributes to apply to the new node (e.g., `{ level: 2 }` for a heading).
+</ParamField>
+
+<ParamField path="markTypeName" type="string" required>
+  A ProseMirror mark type to apply to the text.
+</ParamField>
+
+<ParamField path="markAttrs" type="Record<string, any>" required>
+  Attributes for the mark (e.g., `{ href: "https://example.com" }` for a link).
+</ParamField>
+
+<ParamField path="select" type="boolean">
+  If `true`, the replaced content is selected after the operation.
+</ParamField>
+
+```typescript
+const from = Zotero.BetterNotes.api.editor.getPositionAtLine(editor, 2, "start");
+const to   = Zotero.BetterNotes.api.editor.getPositionAtLine(editor, 2, "end");
+
+// Replace line 2 with a level-2 heading
+Zotero.BetterNotes.api.editor.replace(
+  editor, from, to,
+  "Methods",
+  "heading", { level: 2 },
+  "strong", {},
+);
+```
+
+---
+
+## `scroll`
+
+Scrolls the editor viewport to bring a specific line index into view.
+
+```typescript
+function scroll(editor: Zotero.EditorInstance, lineIndex: number): void
+```
+
+<ParamField path="editor" type="Zotero.EditorInstance" required>
+  The editor instance.
+</ParamField>
+
+<ParamField path="lineIndex" type="number" required>
+  Zero-based line (block node) index to scroll to.
+</ParamField>
+
+---
+
+## `scrollToSection`
+
+Scrolls the editor to the line containing a heading whose text matches `sectionName`. The match is trimmed before comparison.
+
+```typescript
+async function scrollToSection(
+  editor: Zotero.EditorInstance,
+  sectionName: string,
+): Promise<void>
+```
+
+<ParamField path="editor" type="Zotero.EditorInstance" required>
+  The editor instance.
+</ParamField>
+
+<ParamField path="sectionName" type="string" required>
+  The exact heading text to scroll to (leading/trailing whitespace is ignored).
+</ParamField>
+
+```typescript
+await Zotero.BetterNotes.api.editor.scrollToSection(editor, "Related Work");
+```
+
+---
+
+## `getRangeAtCursor`
+
+Returns the ProseMirror `from`/`to` positions of the current selection.
+
+```typescript
+function getRangeAtCursor(editor: Zotero.EditorInstance): { from: number; to: number }
+```
+
+<ResponseField name="return" type="{ from: number; to: number }">
+  The start and end positions of the current selection.
+</ResponseField>
+
+---
+
+## `getLineAtCursor`
+
+Returns the zero-based line index of the block node that contains the cursor. Returns `-1` if no cursor position is available.
+
+```typescript
+function getLineAtCursor(editor: Zotero.EditorInstance): number
+```
+
+<ResponseField name="return" type="number">
+  Zero-based line index, or `-1` on failure.
+</ResponseField>
+
+---
+
+## `getSectionAtCursor`
+
+Returns the heading text of the section that contains the cursor, by walking the note tree. Returns `undefined` if the cursor is before the first heading.
+
+```typescript
+async function getSectionAtCursor(
+  editor: Zotero.EditorInstance,
+): Promise<string | undefined>
+```
+
+<ResponseField name="return" type="Promise<string | undefined>">
+  The name of the enclosing heading section, or `undefined`.
+</ResponseField>
+
+---
+
+## `getPositionAtLine`
+
+Converts a zero-based line index to a ProseMirror document position.
+
+```typescript
+function getPositionAtLine(
+  editor: Zotero.EditorInstance,
+  lineIndex: number,
+  type?: "start" | "end",
+): number
+```
+
+<ParamField path="editor" type="Zotero.EditorInstance" required>
+  The editor instance.
+</ParamField>
+
+<ParamField path="lineIndex" type="number" required>
+  Zero-based line index.
+</ParamField>
+
+<ParamField path="type" type="&quot;start&quot; | &quot;end&quot;">
+  Whether to return the position at the `"start"` or `"end"` of the line. Defaults to `"end"`.
+</ParamField>
+
+<ResponseField name="return" type="number">
+  The ProseMirror document position.
+</ResponseField>
+
+---
+
+## `getLineCount`
+
+Returns the total number of block-level nodes (lines) in the editor document.
+
+```typescript
+function getLineCount(editor: Zotero.EditorInstance): number
+```
+
+<ResponseField name="return" type="number">
+  Total line count.
+</ResponseField>
+
+---
+
+## `getTextBetween`
+
+Returns the plain text between two ProseMirror positions.
+
+```typescript
+function getTextBetween(
+  editor: Zotero.EditorInstance,
+  from: number,
+  to: number,
+): string
+```
+
+<ParamField path="from" type="number" required>
+  Start position.
+</ParamField>
+
+<ParamField path="to" type="number" required>
+  End position.
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Plain text content in the range.
+</ResponseField>
+
+---
+
+## `getTextBetweenLines`
+
+Returns the plain text between two line indices (inclusive on both ends).
+
+```typescript
+function getTextBetweenLines(
+  editor: Zotero.EditorInstance,
+  fromIndex: number,
+  toIndex: number,
+): string
+```
+
+<ParamField path="fromIndex" type="number" required>
+  Zero-based index of the first line.
+</ParamField>
+
+<ParamField path="toIndex" type="number" required>
+  Zero-based index of the last line.
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Plain text content spanning the line range.
+</ResponseField>
+
+```typescript
+const text = Zotero.BetterNotes.api.editor.getTextBetweenLines(editor, 0, 4);
+console.log(text); // plain text of lines 0–4
+```
+
+---
+
+## `moveHeading`
+
+Moves a heading node (and all its content) to a new position in the document tree, adjusting heading levels as needed.
+
+```typescript
+function moveHeading(
+  editor: Zotero.EditorInstance | undefined,
+  currentNode: TreeModel.Node<NoteNodeData>,
+  targetNode: TreeModel.Node<NoteNodeData>,
+  as: "child" | "before" | "after",
+): void
+```
+
+<ParamField path="editor" type="Zotero.EditorInstance | undefined" required>
+  The editor instance. If `undefined`, the function is a no-op.
+</ParamField>
+
+<ParamField path="currentNode" type="TreeModel.Node<NoteNodeData>" required>
+  The tree node representing the heading to move. Obtain from `api.note.getNoteTreeFlattened`.
+</ParamField>
+
+<ParamField path="targetNode" type="TreeModel.Node<NoteNodeData>" required>
+  The destination tree node.
+</ParamField>
+
+<ParamField path="as" type="&quot;child&quot; | &quot;before&quot; | &quot;after&quot;" required>
+  Relation of the moved heading to the target: insert as a child, immediately before, or immediately after.
+</ParamField>
+
+<Warning>
+Moving a heading to a descendant of itself is ignored to prevent infinite loops.
+</Warning>
+
+---
+
+## `updateHeadingTextAtLine`
+
+Replaces the text of the heading node at the given line index, preserving the heading level.
+
+```typescript
+function updateHeadingTextAtLine(
+  editor: Zotero.EditorInstance,
+  lineIndex: number,
+  text: string,
+): void
+```
+
+<ParamField path="editor" type="Zotero.EditorInstance" required>
+  The editor instance.
+</ParamField>
+
+<ParamField path="lineIndex" type="number" required>
+  Zero-based line index of the heading to update.
+</ParamField>
+
+<ParamField path="text" type="string" required>
+  New plain-text content for the heading.
+</ParamField>
+
+```typescript
+// Rename the heading on line 3 without changing its level
+Zotero.BetterNotes.api.editor.updateHeadingTextAtLine(editor, 3, "Revised Methods");
+```

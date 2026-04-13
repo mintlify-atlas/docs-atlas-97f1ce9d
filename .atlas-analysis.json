@@ -1,0 +1,109 @@
+{
+  "projectType": "general",
+  "projectName": "Better Notes for Zotero",
+  "projectDescription": "A powerful Zotero plugin for enhanced note management with features including note linking, templates, Markdown sync, multi-format export, and a plugin API.",
+  "theme": "almond",
+  "primaryColor": "#848c8e",
+  "lightColor": "#11161e",
+  "darkColor": "#cfd0d2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/note-editor",
+              "features/note-linking",
+              "features/note-templates",
+              "features/markdown-sync",
+              "features/export"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/template-writing",
+              "guides/obsidian-integration",
+              "guides/workflow-automation",
+              "guides/llm-integration"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/contributing",
+              "development/building"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview"
+            ]
+          },
+          {
+            "group": "Modules",
+            "pages": [
+              "api/editor",
+              "api/note",
+              "api/sync",
+              "api/convert",
+              "api/template",
+              "api/export-import",
+              "api/relation"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Enhanced note editor with Magic Key command palette and outline view",
+    "Note linking with bidirectional relation tracking (inbound/outbound links)",
+    "Powerful note templates with JavaScript scripting support",
+    "Two-way Markdown sync with external editors like Obsidian",
+    "Multi-format export: Markdown, DOCX, PDF, FreeMind mind maps, LaTeX",
+    "Plugin API for other Zotero extensions to integrate",
+    "Quick Note: convert annotations to notes with one click",
+    "Image viewer with resize and preview support"
+  ],
+  "publicApiSurface": [
+    "Zotero.BetterNotes.api.editor.getEditorInstance(noteId)",
+    "Zotero.BetterNotes.api.editor.insert(editor, content)",
+    "Zotero.BetterNotes.api.editor.replace(editor, from, to, content)",
+    "Zotero.BetterNotes.api.note.getNoteTree(noteItem)",
+    "Zotero.BetterNotes.api.note.getLinesInNote(noteItem)",
+    "Zotero.BetterNotes.api.sync.isSyncNote(noteItem)",
+    "Zotero.BetterNotes.api.sync.addSyncNote(noteItem, filePath)",
+    "Zotero.BetterNotes.api.sync.getSyncStatus(noteItem)",
+    "Zotero.BetterNotes.api.convert.md2note(md)",
+    "Zotero.BetterNotes.api.convert.note2md(noteItem)",
+    "Zotero.BetterNotes.api.convert.note2html(noteItem)",
+    "Zotero.BetterNotes.api.convert.html2md(html)",
+    "Zotero.BetterNotes.api.template.runTemplate(templateName, args)",
+    "Zotero.BetterNotes.api.template.getTemplateKeys()",
+    "Zotero.BetterNotes.api.template.setTemplate(name, content)",
+    "Zotero.BetterNotes.api.$export.exportNotes(noteItems, options)",
+    "Zotero.BetterNotes.api.$export.saveMD(noteItem, filePath)",
+    "Zotero.BetterNotes.api.$export.saveDocx(noteItem, filePath)",
+    "Zotero.BetterNotes.api.$import.fromMD(filePath, options)",
+    "Zotero.BetterNotes.api.relation.getNoteLinkInboundRelation(noteItem)",
+    "Zotero.BetterNotes.api.relation.getNoteLinkOutboundRelation(noteItem)",
+    "Zotero.BetterNotes.api.workspace.getWorkspaceByUID(uid)"
+  ]
+}

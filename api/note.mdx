@@ -1,0 +1,234 @@
+---
+title: "Note API — Better Notes for Zotero"
+description: "Reference for the Better Notes note module: insert content, read lines, and parse note structure into a tree without requiring an open editor window."
+---
+
+The note module provides functions for reading and modifying Zotero note items through their stored metadata, without requiring the note to be open in an editor window. When a note is open, `insert` (an alias for `addLineToNote`) automatically delegates to the live editor, so you do not need to check editor state before calling it. The tree-parsing functions always work against the stored HTML.
+
+<Info>
+If you need features that require the live ProseMirror state — such as undo/redo, cursor awareness, or scroll control — use the [Editor API](/api/editor) instead.
+</Info>
+
+## `insert`
+
+Inserts an HTML string into a note at the specified line index. This function is exposed as `Zotero.BetterNotes.api.note.insert` and maps to the internal `addLineToNote` function. If the note is currently open in an editor, the insertion is performed through ProseMirror; otherwise it modifies the raw note metadata directly.
+
+```typescript
+async function insert(
+  note: Zotero.Item,
+  html: string,
+  lineIndex?: number,
+  forceMetadata?: boolean,
+): Promise<void>
+```
+
+<ParamField path="note" type="Zotero.Item" required>
+  The Zotero note item to insert content into.
+</ParamField>
+
+<ParamField path="html" type="string" required>
+  HTML string to insert. Must be non-empty.
+</ParamField>
+
+<ParamField path="lineIndex" type="number">
+  Zero-based line index at which to insert. Negative values or values beyond the last line append to the end. Defaults to `-1` (append).
+</ParamField>
+
+<ParamField path="forceMetadata" type="boolean">
+  If `true`, always modifies the raw metadata even when the note is open in an editor. Defaults to `false`.
+</ParamField>
+
+```typescript
+const noteItem = Zotero.Items.get(12345);
+
+// Append a paragraph to the end of the note
+await Zotero.BetterNotes.api.note.insert(noteItem, "<p>New content</p>");
+
+// Insert at line 2
+await Zotero.BetterNotes.api.note.insert(noteItem, "<h2>Results</h2>", 2);
+```
+
+<Note>
+If `note` is falsy or `html` is empty, the function returns without making any changes.
+</Note>
+
+---
+
+## `getLinesInNote`
+
+Returns an array of HTML strings, one per block-level line in the note's stored content. Optionally converts the note content through the full rendering pipeline first (resolving note links, citations, etc.) before parsing.
+
+```typescript
+async function getLinesInNote(
+  note: Zotero.Item,
+  options?: {
+    convertToHTML?: boolean;
+  },
+): Promise<string[]>
+```
+
+<ParamField path="note" type="Zotero.Item" required>
+  The Zotero note item to read.
+</ParamField>
+
+<ParamField path="options.convertToHTML" type="boolean">
+  If `true`, the note content is first converted through `note2html` before being split into lines. This resolves embedded note links and renders citations. Defaults to `false`.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string[]>">
+  An array of HTML strings, each representing one block-level node.
+</ResponseField>
+
+```typescript
+const noteItem = Zotero.Items.get(12345);
+
+const lines = await Zotero.BetterNotes.api.note.getLinesInNote(noteItem);
+console.log(`Note has ${lines.length} lines`);
+console.log(lines[0]); // e.g. "<h1>Introduction</h1>"
+
+// With full HTML rendering (resolves note links, citations)
+const renderedLines = await Zotero.BetterNotes.api.note.getLinesInNote(noteItem, {
+  convertToHTML: true,
+});
+```
+
+---
+
+## `getNoteTree`
+
+Parses the note content into a hierarchical tree of heading nodes and note-link nodes. The root node has `id: -1` and `level: 0`. Heading nodes have levels 1–6 and carry `lineIndex`/`endIndex` properties pointing to the range of lines they encompass.
+
+```typescript
+async function getNoteTree(
+  note: Zotero.Item,
+  parseLink?: boolean,
+): Promise<TreeModel.Node<NoteNodeData>>
+```
+
+<ParamField path="note" type="Zotero.Item" required>
+  The Zotero note item to parse.
+</ParamField>
+
+<ParamField path="parseLink" type="boolean">
+  If `true` (the default), lines containing `zotero://note/` links are also included as leaf nodes in the tree. Pass `false` to include headings only.
+</ParamField>
+
+<ResponseField name="return" type="Promise<TreeModel.Node<NoteNodeData>>">
+  The root `TreeModel.Node`. Use `.children`, `.walk()`, `.all()`, and `.first()` on it.
+</ResponseField>
+
+The `NoteNodeData` shape:
+
+```typescript
+interface NoteNodeData {
+  id: number;        // Auto-incrementing node ID
+  level: number;     // Heading level 1–6; 7 for link nodes; 0 for root
+  name: string;      // Heading text or inner text of the link
+  lineIndex: number; // Zero-based start line; -1 for root
+  endIndex: number;  // Zero-based last line of this section
+  link?: string;     // zotero://note/ URL (link nodes only)
+}
+```
+
+```typescript
+const noteItem = Zotero.Items.get(12345);
+const root = await Zotero.BetterNotes.api.note.getNoteTree(noteItem);
+
+// Walk all headings
+root.walk((node) => {
+  if (node.model.level > 0 && node.model.level <= 6) {
+    console.log(`H${node.model.level}: ${node.model.name}`);
+  }
+  return true; // continue walking
+});
+```
+
+---
+
+## `getNoteTreeFlattened`
+
+Returns a flat array of tree nodes, filtered by the options provided. By default the root node and note-link nodes are excluded, returning only heading nodes.
+
+```typescript
+async function getNoteTreeFlattened(
+  note: Zotero.Item,
+  options?: {
+    keepRoot?: boolean;
+    keepLink?: boolean;
+    customFilter?: (node: TreeModel.Node<NoteNodeData>) => boolean;
+  },
+): Promise<TreeModel.Node<NoteNodeData>[]>
+```
+
+<ParamField path="note" type="Zotero.Item" required>
+  The Zotero note item to parse.
+</ParamField>
+
+<ParamField path="options.keepRoot" type="boolean">
+  Include the root node (id `-1`) in the result. Defaults to `false`.
+</ParamField>
+
+<ParamField path="options.keepLink" type="boolean">
+  Include note-link nodes (level `7`) in the result. Defaults to `false`.
+</ParamField>
+
+<ParamField path="options.customFilter" type="(node) => boolean">
+  An additional predicate applied after the built-in filters.
+</ParamField>
+
+<ResponseField name="return" type="Promise<TreeModel.Node<NoteNodeData>[]>">
+  A flat array of matching nodes in document order.
+</ResponseField>
+
+```typescript
+const noteItem = Zotero.Items.get(12345);
+
+// All heading nodes (default)
+const headings = await Zotero.BetterNotes.api.note.getNoteTreeFlattened(noteItem);
+
+// Only level-2 headings
+const h2Nodes = await Zotero.BetterNotes.api.note.getNoteTreeFlattened(noteItem, {
+  customFilter: (node) => node.model.level === 2,
+});
+```
+
+---
+
+## `getNoteTreeNodeById`
+
+Finds a single tree node by its numeric `id` field, searching from an optional subtree root.
+
+```typescript
+async function getNoteTreeNodeById(
+  note: Zotero.Item,
+  id: number,
+  root?: TreeModel.Node<NoteNodeData>,
+): Promise<TreeModel.Node<NoteNodeData> | undefined>
+```
+
+<ParamField path="note" type="Zotero.Item" required>
+  The Zotero note item. Used to build the tree when `root` is not provided.
+</ParamField>
+
+<ParamField path="id" type="number" required>
+  The numeric `id` of the node to find.
+</ParamField>
+
+<ParamField path="root" type="TreeModel.Node<NoteNodeData>">
+  Optional pre-built tree root. If omitted, a fresh tree is built from `note`.
+</ParamField>
+
+<ResponseField name="return" type="Promise<TreeModel.Node<NoteNodeData> | undefined>">
+  The matching node, or `undefined` if not found.
+</ResponseField>
+
+```typescript
+const noteItem = Zotero.Items.get(12345);
+
+// Build the tree once and look up multiple nodes efficiently
+const root = await Zotero.BetterNotes.api.note.getNoteTree(noteItem);
+const node = await Zotero.BetterNotes.api.note.getNoteTreeNodeById(noteItem, 3, root);
+if (node) {
+  console.log(`Found: ${node.model.name} at line ${node.model.lineIndex}`);
+}
+```

@@ -1,0 +1,90 @@
+---
+title: "Better Notes plugin API overview"
+description: "Learn how to access and use the Better Notes for Zotero plugin API from other Zotero plugins, including all available modules and when to use each one."
+---
+
+The Better Notes plugin exposes a stable JavaScript API at `Zotero.BetterNotes.api` that other Zotero plugins can call at runtime. The API is divided into named modules — each module groups a set of related functions. You do not need to import any package; as long as Better Notes is installed and enabled, the global object is available inside Zotero's privileged context.
+
+## Accessing the API
+
+```typescript
+// Top-level namespace
+const bn = Zotero.BetterNotes.api;
+
+// Module access pattern
+const editor  = Zotero.BetterNotes.api.editor;
+const note    = Zotero.BetterNotes.api.note;
+const sync    = Zotero.BetterNotes.api.sync;
+const convert = Zotero.BetterNotes.api.convert;
+```
+
+<Note>
+The `Zotero.BetterNotes` global is only defined after Better Notes has finished loading. If your plugin initialises early, wait for the `Zotero.initializationPromise` to resolve before using the API.
+</Note>
+
+## Available modules
+
+| Module | Path | Purpose |
+|---|---|---|
+| `workspace` | `api.workspace` | Retrieve workspace instances by UID |
+| `sync` | `api.sync` | Manage Markdown ↔ note sync state |
+| `convert` | `api.convert` | Convert between note HTML, Markdown, LaTeX, and links |
+| `template` | `api.template` | Run and manage note templates |
+| `$export` | `api.$export` | Export notes to MD, DOCX, PDF, FreeMind, LaTeX |
+| `$import` | `api.$import` | Import Markdown files as Zotero notes |
+| `editor` | `api.editor` | Manipulate an open note's ProseMirror editor |
+| `note` | `api.note` | Read and write note content without an open editor |
+| `relation` | `api.relation` | Query and update note-link relationship data |
+| `utils` | `api.utils` | Locale strings and restart utilities |
+
+## `editor` vs `note` — which to use
+
+Both the `editor` and `note` modules can modify note content, but they operate through different pathways.
+
+**Use `api.editor`** when the note is currently open in a Zotero editor window. Changes go through ProseMirror, so they participate in undo/redo history and are immediately reflected in the UI. Call `api.editor.getEditorInstance(noteId)` first; if it returns `undefined` the note is not open and you must fall back to `api.note`.
+
+**Use `api.note`** when the note may or may not be open. Functions in this module operate on the raw Zotero item metadata. If the note happens to be open, `addLineToNote` (exposed as `api.note.insert`) will automatically delegate to the editor, but other `note` functions always work against the stored HTML regardless of editor state.
+
+```typescript
+const noteId = 12345;
+
+// Try to use the live editor first
+const editorInstance = Zotero.BetterNotes.api.editor.getEditorInstance(noteId);
+if (editorInstance) {
+  await Zotero.BetterNotes.api.editor.insert(editorInstance, "<p>Hello</p>");
+} else {
+  // Note is not open — use the note API
+  const noteItem = Zotero.Items.get(noteId);
+  await Zotero.BetterNotes.api.note.insert(noteItem, "<p>Hello</p>");
+}
+```
+
+<Info>
+In Zotero, note content is stored as a rich-text HTML string. When a note is open in the editor, the content is rendered by ProseMirror and all mutations pass through ProseMirror transactions, meaning they fire change notifications and respect undo history.
+</Info>
+
+## Module pages
+
+<CardGroup cols={2}>
+  <Card title="Editor API" icon="pen-to-square" href="/api/editor">
+    Manipulate open notes via ProseMirror — insert, delete, move, scroll, and query cursor position.
+  </Card>
+  <Card title="Note API" icon="file-lines" href="/api/note">
+    Read and write note content without requiring an open editor window.
+  </Card>
+  <Card title="Sync API" icon="arrows-rotate" href="/api/sync">
+    Register, query, and update the Markdown sync state for notes.
+  </Card>
+  <Card title="Convert API" icon="shuffle" href="/api/convert">
+    Convert between Zotero note HTML, Markdown, LaTeX, note links, and annotations.
+  </Card>
+  <Card title="Template API" icon="code" href="/api/template">
+    Run built-in and custom note templates programmatically.
+  </Card>
+  <Card title="Export and Import API" icon="arrow-up-from-bracket" href="/api/export-import">
+    Export notes to multiple formats and import Markdown files as notes.
+  </Card>
+  <Card title="Relation API" icon="diagram-project" href="/api/relation">
+    Query inbound and outbound note-link relationships and annotation links.
+  </Card>
+</CardGroup>

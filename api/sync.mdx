@@ -1,0 +1,283 @@
+---
+title: "Sync API — Better Notes for Zotero"
+description: "Reference for the Better Notes sync module: register notes for Markdown sync, query sync status objects, read MD file metadata, and discover all synced files."
+---
+
+The sync module manages the persistent mapping between Zotero note items and their corresponding Markdown files on disk. Sync state is stored in Zotero preferences using a keyed data structure. Functions that read or write file contents are asynchronous; functions that only read preference data are synchronous. Note IDs (not item objects) are the primary key throughout this module.
+
+<Note>
+Most consumers do not need to call `addSyncNote` or `updateSyncStatus` directly — the export module and the built-in sync workflow manage these for you. Use these functions when you need to register a note for sync programmatically from another plugin.
+</Note>
+
+## `isSyncNote`
+
+Returns `true` if the given note ID is registered for Markdown sync.
+
+```typescript
+function isSyncNote(noteId: number): boolean
+```
+
+<ParamField path="noteId" type="number" required>
+  The numeric item ID of the note.
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the note is registered, `false` otherwise.
+</ResponseField>
+
+```typescript
+const noteId = 12345;
+if (Zotero.BetterNotes.api.sync.isSyncNote(noteId)) {
+  console.log("This note is synced to a Markdown file.");
+}
+```
+
+---
+
+## `getSyncNoteIds`
+
+Returns the item IDs of all notes that are currently registered for sync. Items that no longer exist or are not notes are excluded.
+
+```typescript
+async function getSyncNoteIds(): Promise<number[]>
+```
+
+<ResponseField name="return" type="Promise<number[]>">
+  Array of numeric note item IDs.
+</ResponseField>
+
+```typescript
+const ids = await Zotero.BetterNotes.api.sync.getSyncNoteIds();
+console.log(`${ids.length} notes are synced`);
+```
+
+---
+
+## `addSyncNote`
+
+Registers a note ID in the sync list. This only adds the key; call `updateSyncStatus` afterward to store the file path and other metadata.
+
+```typescript
+function addSyncNote(noteId: number): void
+```
+
+<ParamField path="noteId" type="number" required>
+  The numeric item ID of the note to register.
+</ParamField>
+
+```typescript
+Zotero.BetterNotes.api.sync.addSyncNote(noteId);
+Zotero.BetterNotes.api.sync.updateSyncStatus(noteId, {
+  path: "/Users/you/notes",
+  filename: "my-note-ABCDEFG.md",
+  md5: "",
+  noteMd5: "",
+  lastsync: 0,
+  itemID: noteId,
+});
+```
+
+---
+
+## `updateSyncStatus`
+
+Stores or overwrites the `SyncStatus` record for a note. This record holds the file path, filename, and MD5 hashes used to detect changes.
+
+```typescript
+function updateSyncStatus(noteId: number, status: SyncStatus): void
+```
+
+<ParamField path="noteId" type="number" required>
+  The numeric item ID of the note.
+</ParamField>
+
+<ParamField path="status" type="SyncStatus" required>
+  The sync status object to store. See the `SyncStatus` shape below.
+</ParamField>
+
+The `SyncStatus` shape:
+
+```typescript
+interface SyncStatus {
+  path: string;       // Directory path of the Markdown file
+  filename: string;   // Filename (e.g. "My Note-ABCDEFG.md")
+  md5: string;        // MD5 of the last-synced MD file content
+  noteMd5: string;    // MD5 of the last-synced note HTML content
+  lastsync: number;   // Unix timestamp (ms) of the last sync
+  itemID: number;     // Note item ID (denormalized copy)
+}
+```
+
+---
+
+## `removeSyncNote`
+
+Removes a note from the sync registry, deleting all stored sync metadata for it. The corresponding Markdown file on disk is not deleted.
+
+```typescript
+function removeSyncNote(noteId: number): void
+```
+
+<ParamField path="noteId" type="number" required>
+  The numeric item ID of the note to deregister.
+</ParamField>
+
+---
+
+## `getSyncStatus`
+
+Returns the stored `SyncStatus` for a note, merged with defaults for any missing fields. The `path` field is normalised to the platform path separator.
+
+```typescript
+function getSyncStatus(noteId?: number): SyncStatus
+```
+
+<ParamField path="noteId" type="number">
+  The numeric item ID of the note. If omitted, returns a default empty status.
+</ParamField>
+
+<ResponseField name="return" type="SyncStatus">
+  The current sync status object.
+</ResponseField>
+
+```typescript
+const status = Zotero.BetterNotes.api.sync.getSyncStatus(noteId);
+console.log(`Synced to: ${status.path}/${status.filename}`);
+console.log(`Last sync: ${new Date(status.lastsync)}`);
+```
+
+---
+
+## `getNoteStatus`
+
+Reads the raw note HTML and splits it into its structural parts: the opening `<div>` metadata tag, the inner content, and the closing `</div>`. Also returns the note's last-modified date.
+
+```typescript
+function getNoteStatus(noteId: number): NoteStatus | undefined
+```
+
+<ParamField path="noteId" type="number" required>
+  The numeric item ID of the note.
+</ParamField>
+
+<ResponseField name="return" type="NoteStatus | undefined">
+  The parsed note status, or `undefined` if the item is not a note.
+</ResponseField>
+
+The `NoteStatus` shape:
+
+```typescript
+interface NoteStatus {
+  meta: string;           // Opening div tag, e.g. '<div data-schema-version="9">'
+  content: string;        // Inner HTML content without the wrapper div
+  tail: string;           // Closing tag, always "</div>"
+  lastmodify: Date;       // Note's last-modified date
+}
+```
+
+---
+
+## `getMDStatus`
+
+Reads a Markdown file and returns its parsed status, including the YAML front-matter metadata and the body content. The `source` argument accepts a file path string, a note item ID, or a note `Zotero.Item`.
+
+```typescript
+async function getMDStatus(
+  source: Zotero.Item | number | string,
+): Promise<MDStatus>
+```
+
+<ParamField path="source" type="Zotero.Item | number | string" required>
+  A file path string, a numeric note item ID (resolves the path from sync status), or a `Zotero.Item` note object.
+</ParamField>
+
+<ResponseField name="return" type="Promise<MDStatus>">
+  The parsed Markdown file status. Returns an empty status if the file does not exist.
+</ResponseField>
+
+The `MDStatus` shape:
+
+```typescript
+interface MDStatus {
+  meta: Record<string, any> | null; // Parsed YAML front-matter (null if absent)
+  content: string;                  // Body content after the front-matter
+  filedir: string;                  // Directory path of the file
+  filename: string;                 // File name
+  lastmodify: Date;                 // File's last-modified date
+}
+```
+
+```typescript
+const mdStatus = await Zotero.BetterNotes.api.sync.getMDStatus(noteId);
+console.log(mdStatus.meta?.$itemKey);   // Zotero item key in YAML header
+console.log(mdStatus.content);          // Markdown body text
+```
+
+---
+
+## `getMDStatusFromContent`
+
+Parses a raw Markdown string (content already loaded into memory) into an `MDStatus` object. Useful when you have already read the file and want to avoid an additional IO call.
+
+```typescript
+function getMDStatusFromContent(contentRaw: string): MDStatus
+```
+
+<ParamField path="contentRaw" type="string" required>
+  The full raw content of a Markdown file, including any YAML front-matter.
+</ParamField>
+
+<ResponseField name="return" type="MDStatus">
+  The parsed status. `filedir` and `filename` are empty strings since no file path is available.
+</ResponseField>
+
+---
+
+## `getMDFileName`
+
+Determines the Markdown filename for a note. Checks the current sync status first; if no file exists, searches `searchDir` for a file whose name ends with the note's Zotero key. Falls back to running the `[ExportMDFileNameV2]` template if no match is found.
+
+```typescript
+async function getMDFileName(noteId: number, searchDir?: string): Promise<string>
+```
+
+<ParamField path="noteId" type="number" required>
+  The numeric item ID of the note.
+</ParamField>
+
+<ParamField path="searchDir" type="string">
+  Optional directory path to search for an existing Markdown file matching this note's key.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  The resolved or generated Markdown filename (e.g. `"My Note-ABCDEFG.md"`).
+</ResponseField>
+
+---
+
+## `findAllSyncedFiles`
+
+Recursively scans a directory for Markdown files that contain Better Notes YAML front-matter (`$libraryID` and `$itemKey` fields) and returns a `SyncStatus` record for each matched note. Subdirectories are traversed automatically.
+
+```typescript
+async function findAllSyncedFiles(searchDir: string): Promise<SyncStatus[]>
+```
+
+<ParamField path="searchDir" type="string" required>
+  Absolute path of the directory to scan.
+</ParamField>
+
+<ResponseField name="return" type="Promise<SyncStatus[]>">
+  An array of `SyncStatus` objects, one per matched Markdown file. Files with missing or unresolvable metadata are skipped.
+</ResponseField>
+
+```typescript
+const results = await Zotero.BetterNotes.api.sync.findAllSyncedFiles("/Users/you/notes");
+for (const status of results) {
+  console.log(`${status.filename} → note #${status.itemID}`);
+}
+```
+
+<Tip>
+Use `findAllSyncedFiles` to re-connect existing Markdown files to their Zotero notes after moving the notes directory, without re-exporting everything.
+</Tip>

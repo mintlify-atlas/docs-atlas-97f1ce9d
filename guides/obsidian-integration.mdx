@@ -1,0 +1,84 @@
+---
+title: "Use Better Notes with Obsidian via Markdown sync"
+description: "Step-by-step guide to keeping Zotero notes in two-way automatic sync with Obsidian Markdown files — no extra plugins or webhooks required."
+---
+
+Better Notes can keep your Zotero notes in continuous two-way sync with Markdown files on disk, making it straightforward to read and edit your research notes in Obsidian while Zotero stays up to date automatically. There is no need for the Obsidian Zotero Desktop Connector, webhooks, or any other third-party tooling.
+
+## Prerequisites
+
+- Better Notes installed in Zotero
+- An Obsidian vault already created on your machine
+- A note open in Better Notes that you want to sync
+
+## Set up sync for a note
+
+<Steps>
+  <Step title="Open the note in Better Notes">
+    Double-click a note item in the Zotero library, or press **Enter** with the note selected, to open it in a tab. You can also open it in its own window by holding **Shift** while opening.
+  </Step>
+  <Step title="Export the note as Markdown">
+    In the note editor toolbar, click the export button and choose **Export as Markdown file**. In the export dialog, choose the folder inside your Obsidian vault where you want to save the file.
+  </Step>
+  <Step title="Enable auto-sync">
+    Before confirming the export, click **Set Auto-Sync** in the export dialog. Better Notes links the Zotero note to the exported `.md` file and begins watching both for changes.
+  </Step>
+  <Step title="Confirm the export">
+    Click **OK** (or the equivalent confirm button) to write the file. The `.md` file now appears in your vault and is connected to the Zotero note.
+  </Step>
+</Steps>
+
+<Tip>
+  Keep your vault folder structure flat or use a dedicated subfolder such as `zotero-notes/` for all synced files. This makes it easy to apply Obsidian templates or dataview queries across your entire Zotero-sourced collection.
+</Tip>
+
+## How two-way sync works
+
+Once auto-sync is enabled, changes flow in both directions:
+
+| Direction | What triggers sync |
+|-----------|-------------------|
+| Zotero → Markdown | After the note editor is closed, and after each auto-sync period |
+| Markdown → Zotero | After each auto-sync period |
+
+The auto-sync period is configurable in **Zotero** → **Edit** → **Preferences** → **Better Notes**. Setting a shorter interval means edits made in Obsidian appear in Zotero more quickly.
+
+<Note>
+  Sync runs after the note editor is closed **and** after the configured auto-sync period elapses — it does not happen instantly on every keystroke.
+</Note>
+
+## What syncs and what does not
+
+Better Notes performs a lossless round-trip conversion between Zotero's rich-text note format and Markdown. The following are preserved:
+
+- Headings, bold, italic, strikethrough, blockquotes, lists
+- Code blocks and inline code
+- Links (including internal Zotero note links)
+- Images embedded in the note (stored alongside the Markdown file)
+
+Zotero-specific features such as annotation highlights and citation links are converted to their closest Markdown equivalents.
+
+## Organizing your vault
+
+<AccordionGroup>
+  <Accordion title="Use a dedicated sync folder">
+    Point all Better Notes exports to a single folder in your vault (e.g., `Papers/`) so they are easy to find and query with Dataview or Templater in Obsidian.
+  </Accordion>
+  <Accordion title="Avoid renaming synced files in Obsidian">
+    Better Notes identifies the linked file by its path. If you rename or move the `.md` file in Obsidian, the sync link breaks. Re-export the note to re-establish the link.
+  </Accordion>
+  <Accordion title="Use the ExportMDFileName built-in template to control file names">
+    The built-in `[ExportMDFileNameV2]` template determines the exported file name. You can customize it in the template editor to match your vault naming convention.
+  </Accordion>
+</AccordionGroup>
+
+## Related guides
+
+<CardGroup cols={2}>
+  <Card title="Workflow automation" icon="robot" href="/guides/workflow-automation">
+    Automatically sync notes when items are opened or created.
+  </Card>
+  <Card title="Template writing" icon="file-code" href="/guides/template-writing">
+    Customize the Markdown export with built-in export templates.
+  </Card>
+</CardGroup>

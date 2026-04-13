@@ -1,0 +1,81 @@
+---
+title: "Integrate AI and LLMs with Better Notes in Zotero"
+description: "Use Zotero-GPT alongside Better Notes to open an AI chat pane in the note editor and generate or modify note content with large language models."
+---
+
+Better Notes exposes an editor API that lets companion plugins insert and modify content inside the Zotero note editor programmatically. The [Zotero-GPT](https://github.com/MuiseDestiny/zotero-gpt) plugin takes advantage of this API to bring an AI chat pane directly into the note-editing experience, so you can use a large language model to draft, expand, or revise your notes without leaving Zotero.
+
+<Note>
+  LLM integration requires the separate [Zotero-GPT](https://github.com/MuiseDestiny/zotero-gpt) plugin by MuiseDestiny. Better Notes provides the editor API; Zotero-GPT provides the AI interface. Both must be installed.
+</Note>
+
+## How it works
+
+When both Better Notes and Zotero-GPT are installed, Zotero-GPT can access the Better Notes editor API to read the current note content and write AI-generated output directly into it. The workflow is:
+
+1. You open a note in the Better Notes editor.
+2. Zotero-GPT adds a chatting pane alongside the editor.
+3. You send a prompt; the AI response is inserted into your note at the cursor or replaces selected content.
+
+## Setup
+
+<Steps>
+  <Step title="Install Better Notes">
+    Download the Better Notes `.xpi` from the [latest release](https://github.com/windingwind/zotero-better-notes/releases/latest) and install it via **Tools** → **Plugins** → gear icon → **Install Add-on from file**.
+  </Step>
+  <Step title="Install Zotero-GPT">
+    Download the Zotero-GPT `.xpi` from the [MuiseDestiny/zotero-gpt releases page](https://github.com/MuiseDestiny/zotero-gpt/releases) and install it the same way.
+  </Step>
+  <Step title="Configure your API key">
+    Open Zotero-GPT preferences and enter your OpenAI (or compatible) API key. Refer to the Zotero-GPT documentation for the full configuration options.
+  </Step>
+  <Step title="Open a note and wake up the chat pane">
+    Open any note in Better Notes. Use the Zotero-GPT command (check its documentation for the exact keyboard shortcut or menu entry) to open the chatting pane within the note editor.
+  </Step>
+  <Step title="Generate or modify content">
+    Type a prompt in the chat pane. The AI response is inserted directly into your note. You can also select existing note text first to send it as context, then apply the AI output to modify or replace that selection.
+  </Step>
+</Steps>
+
+## Use cases
+
+<AccordionGroup>
+  <Accordion title="Draft a paper summary">
+    Open an item's note, paste in the abstract or key passages, and prompt the AI to produce a structured summary. The output lands directly in the note, ready to edit.
+  </Accordion>
+  <Accordion title="Expand bullet points">
+    Write a quick bulleted outline in your note, select the bullets, and ask the AI to expand each point into a full paragraph for a literature review or report section.
+  </Accordion>
+  <Accordion title="Generate a literature review section">
+    Open a note that aggregates content from multiple papers (created via an Item template), then prompt the AI to synthesize the collected excerpts into a coherent narrative.
+  </Accordion>
+  <Accordion title="Rewrite for clarity">
+    Select a passage in your note that feels unclear and ask the AI to rephrase it. The Better Notes editor API allows Zotero-GPT to replace the selection in place.
+  </Accordion>
+</AccordionGroup>
+
+## The Better Notes editor API
+
+Better Notes exposes its editor capabilities at `Zotero.BetterNotes.api.editor`. Plugins like Zotero-GPT use this to:
+
+- Get the active editor instance: `Zotero.BetterNotes.api.editor.getEditorInstance(noteId)`
+- Insert content at the cursor position
+- Replace selected content
+- Read the current note HTML for use as AI context
+
+Because all writes go through the ProseMirror editor instance, changes are fully undo-able with **Ctrl/Cmd+Z**.
+
+<Tip>
+  If you want structured AI-free content generation, note templates are a powerful alternative. An Item template with JavaScript can automatically pull titles, authors, dates, DOIs, and annotations from your library without any API key or network request. See the [template writing guide](/guides/template-writing) for details.
+</Tip>
+
+## Related guides
+
+<CardGroup cols={2}>
+  <Card title="Template writing" icon="file-code" href="/guides/template-writing">
+    Generate structured note content from library metadata without AI.
+  </Card>
+  <Card title="Workflow automation" icon="robot" href="/guides/workflow-automation">
+    Trigger note generation and sync automatically on Zotero events.
+  </Card>
+</CardGroup>

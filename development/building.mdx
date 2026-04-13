@@ -1,0 +1,122 @@
+---
+title: "Build and debug Better Notes from source"
+description: "Set up your local development environment, build the plugin from source, run the development server, and execute the test suite for Better Notes."
+---
+
+Better Notes for Zotero is a TypeScript plugin built on the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template). This page walks you through cloning the repository, installing dependencies, building the plugin, and running it inside Zotero for development.
+
+## Prerequisites
+
+Before you begin, make sure you have the following installed:
+
+- [Node.js](https://nodejs.org) (LTS recommended) and npm
+- [Zotero](https://www.zotero.org/download/) (version 8 or 9)
+- Git
+
+## Setup and build
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/windingwind/zotero-better-notes.git
+    cd zotero-better-notes
+    ```
+  </Step>
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    ```
+  </Step>
+  <Step title="Configure your environment">
+    Copy the example environment file and fill in the paths for your Zotero installation and development profile:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Open `.env` and set the required variables:
+
+    ```bash
+    # Path to the Zotero binary
+    ZOTERO_PLUGIN_ZOTERO_BIN_PATH = /path/to/zotero
+
+    # Path to your Zotero development profile directory
+    ZOTERO_PLUGIN_PROFILE_PATH = /path/to/profile
+    ```
+
+    <Note>
+      Create a dedicated Zotero profile for development by running Zotero with the `-p` flag: `/path/to/zotero -p`. A separate profile keeps your development data isolated from your personal library.
+    </Note>
+  </Step>
+  <Step title="Build the plugin">
+    ```bash
+    npm run build
+    ```
+
+    The compiled plugin is written to `./builds/*.xpi`. You can install this `.xpi` file manually in Zotero via **Tools → Plugins → Install Add-on from file**.
+  </Step>
+</Steps>
+
+## Development server
+
+To develop with hot-reloading, use the development server instead of installing the `.xpi` manually:
+
+```bash
+npm run start
+```
+
+This command (powered by `zotero-plugin serve`) launches Zotero with the plugin loaded from your local source. Changes to source files are picked up automatically, so you can iterate without reinstalling.
+
+## Running tests
+
+The test suite lives in the `./test` directory. To run it:
+
+```bash
+npm run test
+```
+
+Tests run inside Zotero via `zotero-plugin test` with `--abort-on-fail` and `--exit-on-finish` flags, so the process terminates after all tests complete or on the first failure.
+
+## Available scripts
+
+All scripts are defined in `package.json` and run with `npm run <script>`.
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `start` | `zotero-plugin serve` | Serve the plugin for development with hot-reload |
+| `build` | `tsc --noEmit && zotero-plugin build` | Type-check and build the release `.xpi` |
+| `build-dev` | `tsc --noEmit && zotero-plugin build --dev` | Build a development `.xpi` to `./build/` |
+| `lint` | `prettier --write . && eslint . --ext .ts --fix` | Auto-format and fix linting issues |
+| `test` | `zotero-plugin test --abort-on-fail --exit-on-finish` | Run the test suite |
+| `release` | `zotero-plugin release` | Create a new release (runs lint and build) |
+
+<Warning>
+  The `release` script runs `npm run lint` and `npm run build` automatically, then publishes GitHub release assets. Only run this when you intend to cut an official release.
+</Warning>
+
+## Project structure
+
+```
+zotero-better-notes/
+├── src/                    # TypeScript source code
+│   ├── index.ts            # Plugin entry point
+│   ├── addon.ts            # Addon class and lifecycle
+│   ├── hooks.ts            # Startup, shutdown, and event hooks
+│   ├── api.ts              # Public plugin API (Zotero.BetterNotes.api)
+│   ├── modules/            # Feature modules
+│   │   ├── editor/         # Note editor enhancements
+│   │   ├── export/         # Export to Markdown, Docx, PDF, FreeMind
+│   │   ├── import/         # Note import
+│   │   ├── sync/           # Two-way Markdown sync
+│   │   ├── template/       # Note template engine
+│   │   └── workspace/      # Tab/window management and relation graph
+│   └── utils/              # Shared utility functions
+├── addon/                  # Firefox addon manifest and chrome content
+│   └── chrome/content/     # XUL/XHTML UI files and icons
+├── test/                   # Test files
+├── builds/                 # Compiled .xpi output (git-ignored)
+├── .env.example            # Environment variable template
+└── package.json            # Scripts, dependencies, and config
+```
+
+The `src/api.ts` file defines the public API surface that other Zotero plugins can consume at `Zotero.BetterNotes.api`. If you are adding a new feature that other plugins should be able to use, export it through `api.ts`.

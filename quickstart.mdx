@@ -1,80 +1,98 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Get started with Better Notes in 5 minutes"
+description: "A hands-on walkthrough of the core Better Notes workflow: opening a note tab, using the Magic Key, creating note links, and setting up Markdown sync."
 ---
 
-## Get started in three steps
+Better Notes offers a range of features that can be combined like building blocks to create your own note-taking workflow. This guide walks you through the most important ones — from opening your first note tab to syncing with an external Markdown file — in about 5 minutes.
 
-Get your documentation site running locally and make your first customization.
+<Steps>
+  <Step title="Open a note in a tab">
+    In your Zotero library, double-click any note item (or select it and press `Enter`) to open it in a full-width note tab — the same way you open a PDF attachment.
 
-### Step 1: Set up your local environment
+    To open the note in a separate window instead, hold `Shift` while double-clicking.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    <Tip>
+      In earlier versions of Better Notes, the main note view was called the "workspace." That concept no longer exists — you can now open as many note tabs and windows as you like, all at the same time.
+    </Tip>
+  </Step>
+  <Step title="Explore the note tab layout">
+    Once a note is open in a tab, you will see three panels arranged left to right:
 
-### Step 2: Deploy your changes
+    - **Outline** — a live table of contents generated from your headings, useful for navigating long notes
+    - **Note editor** — the main writing area, powered by ProseMirror with Better Notes enhancements
+    - **Context pane** — shows tags, related items, a visual relation graph, and inbound/outbound note links
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    <Note>
+      You can also open the note editor in two other places: click a note in the library to show a compact editor in the **item pane**, or open a PDF and find the note editor in the **right-side context pane** of the PDF reader.
+    </Note>
+  </Step>
+  <Step title="Create your first note">
+    To create a new standalone note:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    - Click the **note icon** in the library toolbar (the row of icons directly below the tab bar), or
+    - Go to **File → New Note**
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    To create a note attached to a library item, right-click the item and choose **Add Note**.
+  </Step>
+  <Step title="Use the Magic Key">
+    Better Notes adds a **Magic Key** command palette to the note editor. Open it by:
 
-### Step 3: Go live
+    - Typing `/` on a new line in the editor, or
+    - Pressing `Ctrl`+`/` (Windows/Linux) or `Cmd`+`/` (macOS)
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    Use the arrow keys to browse available commands — insert templates, add headings, create links, and more — then press `Enter` to execute.
 
-## Next steps
+    <Tip>
+      The Magic Key is the fastest way to insert a note template or apply formatting without leaving the keyboard.
+    </Tip>
+  </Step>
+  <Step title="Create a note link">
+    Note links connect related notes together and power the relation graph in the context pane.
 
-Now that you have your docs running, explore these key features:
+    To link the note you are currently editing to another note:
+
+    1. Click the **Better Notes icon** (the BN logo) in the title bar of the note editor.
+    2. A link creator dialog opens. Choose **Mention in** or **Link to**:
+       - **Mention in** inserts a link to the current note inside another note you pick — this creates an inbound link.
+       - **Link to** inserts links from one or more picked notes into the current note — these are outbound links.
+    3. Select the target note(s) and confirm.
+
+    You can also copy a note's link manually from the note editor context menu and paste it anywhere.
+
+    <Note>
+      After creating a link, open the **Context pane** to see the relation graph update in real time.
+    </Note>
+  </Step>
+  <Step title="Set up Markdown sync">
+    Better Notes can keep any note automatically in sync with an external Markdown file — useful for editing in Obsidian, VS Code, or any other Markdown editor.
+
+    To enable auto-sync for a note:
+
+    1. With the note open, click the **export** button in the editor toolbar.
+    2. Choose **Markdown** as the export format and pick a save location.
+    3. When prompted, click **Set Auto-Sync**.
+
+    From this point on, any changes you make in Zotero will be written to the Markdown file, and any edits to the file will be reflected back in Zotero after the auto-sync period elapses (configurable in preferences).
+
+    <Tip>
+      Sync runs after you close the note editor and after the sync period you set in **Tools → Better Notes Preferences**. You do not need any third-party sync tool.
+    </Tip>
+  </Step>
+</Steps>
+
+## What to explore next
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Note editor" icon="pen-to-square" href="/features/note-editor">
+    Outline view, link preview, direct Markdown paste, and all Magic Key commands
+  </Card>
+  <Card title="Note linking" icon="link" href="/features/note-linking">
+    Bidirectional links, the relation graph, and mention vs. link-to explained
+  </Card>
+  <Card title="Note templates" icon="file-code" href="/features/note-templates">
+    Automate paper summaries and metadata extraction with JavaScript templates
+  </Card>
+  <Card title="Markdown sync" icon="arrows-rotate" href="/features/markdown-sync">
+    Configure two-way sync, set the sync period, and integrate with Obsidian
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

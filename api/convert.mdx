@@ -1,0 +1,430 @@
+---
+title: "Convert API — Better Notes for Zotero"
+description: "Reference for the Better Notes convert module: losslessly convert between Zotero note HTML, Markdown, LaTeX, note links, HTML anchors, and Zotero annotations."
+---
+
+The convert module provides lossless round-trip conversion between Zotero's internal note HTML format and several external representations. Conversion work is offloaded to a background Web Worker (`convertWorker`), so most functions are asynchronous. Zotero-specific elements such as citations, annotation highlights, and embedded images are handled specially during each conversion direction to preserve their structure.
+
+<Note>
+Conversion is performed through a pipeline: note HTML → rehype AST → remark AST → target format. Because of this pipeline, all async convert functions should be `await`-ed.
+</Note>
+
+## `md2note`
+
+Converts an `MDStatus` object (parsed Markdown with optional YAML front-matter) into Zotero note HTML, writing any referenced images as note attachments.
+
+```typescript
+async function md2note(
+  mdStatus: MDStatus,
+  noteItem: Zotero.Item,
+  options?: { isImport?: boolean },
+): Promise<string>
+```
+
+<ParamField path="mdStatus" type="MDStatus" required>
+  A parsed Markdown status object as returned by `api.sync.getMDStatus` or `api.sync.getMDStatusFromContent`.
+</ParamField>
+
+<ParamField path="noteItem" type="Zotero.Item" required>
+  The target note item. Used to copy embedded images as note attachments.
+</ParamField>
+
+<ParamField path="options.isImport" type="boolean">
+  When `true`, citation nodes are re-fetched from Zotero and image files are imported as note attachments. Defaults to `false`.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  The converted note HTML string (inner content only, without the outer `<div>` wrapper).
+</ResponseField>
+
+```typescript
+const mdStatus = await Zotero.BetterNotes.api.sync.getMDStatus("/path/to/note.md");
+const noteItem = Zotero.Items.get(12345);
+const html = await Zotero.BetterNotes.api.convert.md2note(mdStatus, noteItem, {
+  isImport: true,
+});
+noteItem.setNote(`<div data-schema-version="9">${html}</div>`);
+await noteItem.saveTx();
+```
+
+---
+
+## `note2md`
+
+Converts a Zotero note item to a Markdown string. Annotation highlights are serialised with links back to their PDF source. Embedded images are saved to `dir` (in the configured attachments sub-folder).
+
+```typescript
+async function note2md(
+  noteItem: Zotero.Item,
+  dir: string,
+  options?: {
+    keepNoteLink?: boolean;
+    withYAMLHeader?: boolean;
+    cachedYAMLHeader?: Record<string, any>;
+    skipSavingImages?: boolean;
+  },
+): Promise<string>
+```
+
+<ParamField path="noteItem" type="Zotero.Item" required>
+  The Zotero note item to convert.
+</ParamField>
+
+<ParamField path="dir" type="string" required>
+  Absolute path of the output directory. Images are written here.
+</ParamField>
+
+<ParamField path="options.keepNoteLink" type="boolean">
+  Preserve `zotero://note/` links as-is. When `false` (the default), note links pointing to synced notes are rewritten to relative file paths.
+</ParamField>
+
+<ParamField path="options.withYAMLHeader" type="boolean">
+  Prepend a YAML front-matter block containing tags, parent title, collections, and Zotero metadata fields (`$version`, `$libraryID`, `$itemKey`).
+</ParamField>
+
+<ParamField path="options.cachedYAMLHeader" type="Record<string, any>">
+  Existing YAML fields to merge into the header. Fields with `$`-prefixed keys or `tags` are overwritten by freshly generated values.
+</ParamField>
+
+<ParamField path="options.skipSavingImages" type="boolean">
+  Do not copy image files to disk. Image `src` paths are still updated to the expected output location.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  The complete Markdown string, including front-matter if requested.
+</ResponseField>
+
+---
+
+## `note2noteDiff`
+
+Normalises a note's HTML content for use as a diff baseline. Citations are resolved to plain-text form. Returns a cleaned HTML string suitable for passing to `content2diff`.
+
+```typescript
+async function note2noteDiff(noteItem: Zotero.Item): Promise<string>
+```
+
+<ResponseField name="return" type="Promise<string>">
+  Normalised note HTML.
+</ResponseField>
+
+---
+
+## `note2link`
+
+Generates a `zotero://note/` URI for a note item, optionally targeting a specific line or section.
+
+```typescript
+function note2link(
+  noteItem: Zotero.Item,
+  options?: {
+    lineIndex?: number;
+    sectionName?: string;
+    selectionText?: string;
+  },
+): string
+```
+
+<ParamField path="noteItem" type="Zotero.Item" required>
+  The note item to generate a link for.
+</ParamField>
+
+<ParamField path="options.lineIndex" type="number">
+  If provided, the link will target the specific line index.
+</ParamField>
+
+<ParamField path="options.sectionName" type="string">
+  If provided, the link will target the named heading section.
+</ParamField>
+
+<ParamField path="options.selectionText" type="string">
+  If provided, the link will carry the selected text as context.
+</ParamField>
+
+<ResponseField name="return" type="string">
+  A `zotero://note/...` URI string.
+</ResponseField>
+
+```typescript
+const link = Zotero.BetterNotes.api.convert.note2link(noteItem, {
+  sectionName: "Methods",
+});
+// e.g. "zotero://note/u/ABCDEFG/?sectionName=Methods"
+```
+
+---
+
+## `link2note`
+
+Resolves a `zotero://note/` URI to the corresponding Zotero note item.
+
+```typescript
+function link2note(link: string): Zotero.Item | undefined
+```
+
+<ParamField path="link" type="string" required>
+  A `zotero://note/` URI.
+</ParamField>
+
+<ResponseField name="return" type="Zotero.Item | undefined">
+  The resolved note item, or `undefined` if the link is invalid or the item no longer exists.
+</ResponseField>
+
+---
+
+## `link2params`
+
+Parses a `zotero://note/` URI and returns all embedded parameters without resolving the item.
+
+```typescript
+function link2params(link: string): {
+  noteItem: Zotero.Item | undefined;
+  libraryID: number;
+  noteKey: string | undefined;
+  lineIndex: number | undefined;
+  sectionName: string | undefined;
+  ignore: boolean;
+  link: string;
+}
+```
+
+<ParamField path="link" type="string" required>
+  A `zotero://note/` URI.
+</ParamField>
+
+<ResponseField name="return" type="object">
+  An object containing the parsed parameters. `noteItem` is resolved when possible.
+</ResponseField>
+
+---
+
+## `link2html`
+
+Converts a note link to an HTML string containing the target note's content, for use when embedding linked notes inline. Optionally resolves the position within the note (line or section).
+
+```typescript
+async function link2html(
+  link: string,
+  options?: {
+    noteItem?: Zotero.Item;
+    dryRun?: boolean;
+    usePosition?: boolean;
+  },
+): Promise<string>
+```
+
+<ParamField path="link" type="string" required>
+  A `zotero://note/` URI.
+</ParamField>
+
+<ParamField path="options.noteItem" type="Zotero.Item">
+  The target note to copy embedded images into. When provided, images are copied; when absent, they are not.
+</ParamField>
+
+<ParamField path="options.dryRun" type="boolean">
+  If `true`, images are rendered to base64 data URLs for preview without copying attachments.
+</ParamField>
+
+<ParamField path="options.usePosition" type="boolean">
+  If `true`, only the portion of the note at or after the position specified in the link (`lineIndex` or `sectionName`) is returned.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  HTML string of the linked note's content. Returns an empty string if the link is invalid.
+</ResponseField>
+
+---
+
+## `md2html`
+
+Converts a Markdown string to HTML using the same pipeline as the built-in template renderer (`// @use-markdown` pragma).
+
+```typescript
+async function md2html(md: string): Promise<string>
+```
+
+<ParamField path="md" type="string" required>
+  Markdown string to convert.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  Rendered HTML string.
+</ResponseField>
+
+```typescript
+const html = await Zotero.BetterNotes.api.convert.md2html("**Hello** _world_");
+// → "<p><strong>Hello</strong> <em>world</em></p>"
+```
+
+---
+
+## `html2md`
+
+Converts an HTML string to Markdown.
+
+```typescript
+async function html2md(html: string): Promise<string>
+```
+
+<ParamField path="html" type="string" required>
+  HTML string to convert.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  Markdown string.
+</ResponseField>
+
+---
+
+## `annotations2html`
+
+Converts an array of Zotero annotation items to an HTML string using the annotation parser. Pass options to control rendering details such as whether to include annotation comments.
+
+```typescript
+function annotations2html(
+  annotations: Zotero.Item[],
+  options?: AnnotationHTMLOptions,
+): Promise<string>
+```
+
+<ParamField path="annotations" type="Zotero.Item[]" required>
+  An array of Zotero annotation items.
+</ParamField>
+
+<ParamField path="options" type="AnnotationHTMLOptions">
+  Optional rendering options forwarded to `parseAnnotationHTML`. Refer to the annotation utility for available fields.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  HTML string representing the annotations.
+</ResponseField>
+
+---
+
+## `note2html`
+
+Returns the fully rendered HTML for one or more note items, optionally copying embedded images into a target note and resolving citation formatting.
+
+```typescript
+async function note2html(
+  noteItems: Zotero.Item | Zotero.Item[],
+  options?: {
+    targetNoteItem?: Zotero.Item;
+    html?: string;
+    dryRun?: boolean;
+  },
+): Promise<string>
+```
+
+<ParamField path="noteItems" type="Zotero.Item | Zotero.Item[]" required>
+  One or more note items whose content to render.
+</ParamField>
+
+<ParamField path="options.targetNoteItem" type="Zotero.Item">
+  If provided and `dryRun` is `false`, embedded images from `noteItems` are copied into this note as attachments.
+</ParamField>
+
+<ParamField path="options.html" type="string">
+  Override the HTML source instead of reading from `noteItems`. Useful when you have already assembled HTML.
+</ParamField>
+
+<ParamField path="options.dryRun" type="boolean">
+  If `true`, renders images to base64 data URLs instead of copying them.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  Rendered HTML with resolved images, math (KaTeX), and citation formatting.
+</ResponseField>
+
+---
+
+## `item2citation`
+
+Generates the Zotero citation HTML for a set of item IDs, using the currently active citation style. This is exposed as `api.convert.item2citation` and maps to the internal `parseCitationHTML` utility.
+
+```typescript
+async function item2citation(
+  itemIds: number[],
+  citationData?: Record<string, any>,
+): Promise<string>
+```
+
+<ParamField path="itemIds" type="number[]" required>
+  Array of numeric Zotero item IDs to include in the citation.
+</ParamField>
+
+<ParamField path="citationData" type="Record<string, any>">
+  Optional raw citation data object. When provided, it overrides the default citation structure.
+</ParamField>
+
+<ResponseField name="return" type="Promise<string>">
+  HTML-formatted citation string.
+</ResponseField>
+
+---
+
+## `note2latex`
+
+Converts a Zotero note to a LaTeX string. Citations are converted to `\cite{}` commands (requires Better BibTeX for Zotero). Images are saved to `dir`. Returns a tuple of `[latexContent, bibString]` where `bibString` is the BibTeX bibliography (empty if Better BibTeX is not installed).
+
+```typescript
+async function note2latex(
+  noteItem: Zotero.Item,
+  dir: string,
+  options?: {
+    keepNoteLink?: boolean;
+    withYAMLHeader?: boolean;
+    cachedYAMLHeader?: Record<string, any>;
+    skipSavingImages?: boolean;
+  },
+): Promise<[string, string]>
+```
+
+<ParamField path="noteItem" type="Zotero.Item" required>
+  The note item to convert.
+</ParamField>
+
+<ParamField path="dir" type="string" required>
+  Output directory for images.
+</ParamField>
+
+<ResponseField name="return" type="Promise<[string, string]>">
+  A tuple `[latexContent, bibString]`.
+</ResponseField>
+
+<Warning>
+LaTeX export requires the Better BibTeX for Zotero extension to generate `.bib` bibliography output. If it is not installed, `bibString` will be empty.
+</Warning>
+
+---
+
+## `content2diff`
+
+Computes a diff between two strings (typically normalised note HTML produced by `note2noteDiff`). Returns an array of `Change` objects from the `diff` library.
+
+```typescript
+async function content2diff(oldStr: string, newStr: string): Promise<Change[]>
+```
+
+<ParamField path="oldStr" type="string" required>
+  The original content string.
+</ParamField>
+
+<ParamField path="newStr" type="string" required>
+  The modified content string.
+</ParamField>
+
+<ResponseField name="return" type="Promise<Change[]>">
+  Array of `Change` objects (`{ value: string; added?: boolean; removed?: boolean }`).
+</ResponseField>
+
+```typescript
+const oldHtml = await Zotero.BetterNotes.api.convert.note2noteDiff(noteA);
+const newHtml = await Zotero.BetterNotes.api.convert.note2noteDiff(noteB);
+const changes = await Zotero.BetterNotes.api.convert.content2diff(oldHtml, newHtml);
+
+for (const change of changes) {
+  if (change.added)   console.log("+ " + change.value);
+  if (change.removed) console.log("- " + change.value);
+}
+```

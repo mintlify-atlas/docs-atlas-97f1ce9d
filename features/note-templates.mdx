@@ -1,0 +1,143 @@
+---
+title: "Automate notes with Better Notes templates for Zotero"
+description: "Use and manage note templates in Better Notes to automate metadata summaries, paper comparisons, and programmatic note generation in Zotero."
+---
+
+Note templates let you automate repetitive note-writing tasks in Zotero. Instead of manually copying metadata or reformatting content between notes, you write a template once and run it whenever you need it. Better Notes ships with several built-in templates and supports custom templates written in Markdown, HTML, and JavaScript.
+
+## What note templates can do
+
+Templates are well suited for tasks like:
+
+- Summarizing metadata and annotations from multiple papers with custom filters
+- Comparing papers across sections in a structured layout
+- Generating content programmatically using JavaScript to call the Zotero API
+
+Templates run in the context of one or more Zotero items, giving you access to fields like title, authors, DOI, tags, and linked annotations.
+
+## Template types
+
+Better Notes has three template types:
+
+<CardGroup cols={2}>
+  <Card title="Item templates" icon="database">
+    Process one or more library items. Supports three stages: `beforeloop`, `default` (runs once per item), and `afterloop`. Use these to generate summaries or comparison tables across multiple papers.
+  </Card>
+  <Card title="Text templates" icon="file-lines">
+    Basic user templates with no item loop. Useful for inserting reusable snippets or structured blocks into any note.
+  </Card>
+  <Card title="Built-in templates" icon="gear">
+    System templates used internally by Better Notes for link generation, annotation import, export filenames, and more. Their names cannot be changed, but their content can be customized.
+  </Card>
+  <Card title="Community templates" icon="users">
+    Templates shared by other users on GitHub Discussions. Import them from clipboard in one step.
+  </Card>
+</CardGroup>
+
+## Built-in templates reference
+
+Better Notes uses the following built-in templates for its core workflows. Each template name ends with a version suffix (e.g., `V2`, `V3`) that increments when a breaking change is made, keeping older templates available for compatibility.
+
+| Name | Description | Available variables |
+|------|-------------|---------------------|
+| `[QuickInsertV3]` | Generates the link text when inserting a note link | `link`, `linkText`, `subNoteItem`, `noteItem`, `lineIndex`, `sectionName`, `selectionText` |
+| `[QuickImportV2]` | Generates embedded content when importing a linked note | `link`, `noteItem` |
+| `[QuickNoteV5]` | Generates a note from a PDF annotation | `annotationItem`, `topItem`, `noteItem` |
+| `[ExportMDFileNameV2]` | Generates the filename when exporting to Markdown | `noteItem` |
+| `[ExportMDFileHeaderV2]` | Generates the YAML front matter when exporting to Markdown | `noteItem` |
+| `[ExportMDFileContent]` | Post-processes Markdown content during export | `noteItem`, `mdContent` |
+| `[ExportLatexFileContent]` | Post-processes LaTeX content during export | `noteItem`, `latexContent` |
+
+<Note>When a built-in template is updated in a new version of Better Notes, the old version is kept so that any customizations you made continue to work. The new version gets a higher version number (e.g., `[ExportMDFileNameV2]` would become `[ExportMDFileNameV3]` if a breaking change occurs). Use the exact versioned name when referencing these templates in your own code.</Note>
+
+## Finding community templates
+
+The Better Notes community publishes templates in the [GitHub Discussions – Note Templates](https://github.com/windingwind/zotero-better-notes/discussions/categories/note-templates) category. Browse the discussions to find templates for common workflows like paper summaries, citation tables, and metadata exports.
+
+## Importing a template from clipboard
+
+Community templates are shared as YAML or JSON snippets. To import one:
+
+<Steps>
+  <Step title="Copy the template code">
+    Copy the full YAML or JSON template snippet from the discussion post or documentation page.
+  </Step>
+  <Step title="Open the import dialog">
+    In Zotero, go to **Tools** → **New Template from Clipboard**.
+  </Step>
+  <Step title="Confirm">
+    Click **OK**. Better Notes parses the clipboard content and saves the template to your local template list.
+  </Step>
+</Steps>
+
+<Warning>Do not paste the YAML snippet directly into the template editor. The YAML format is only for the clipboard import flow. The template editor expects raw template content, not the YAML wrapper.</Warning>
+
+## Using a template in a note
+
+<Steps>
+  <Step title="Open a note">
+    Open any note as a tab or in the item pane.
+  </Step>
+  <Step title="Place your cursor">
+    Click to position your cursor on the line where you want the template output inserted.
+  </Step>
+  <Step title="Open the template picker">
+    In the editor toolbar, open the **settings menu** (the gear icon) and click **Insert Template to cursor line**.
+  </Step>
+  <Step title="Select and run a template">
+    The template picker window opens. Select the template you want, choose any required input items if prompted, and click **OK**.
+  </Step>
+</Steps>
+
+You can also refresh all template-generated content already in a note by choosing **Update content from templates** in the settings menu. This only works for templates that include the `// @use-refresh` pragma.
+
+## The template editor
+
+The template editor is a Monaco-based code editor (the same editor used in VS Code) for writing and modifying templates.
+
+To open it: go to **Tools** → **Note Template Editor** in the Zotero menu bar.
+
+The editor provides:
+
+- A template list on the left for selecting and creating templates
+- Syntax highlighting for Markdown, HTML, and JavaScript
+- A live preview pane for testing templates in dry-run mode (writes are disabled)
+- An **Options** menu with actions including **Copy share code** for exporting a template to share with the community
+
+## Template syntax overview
+
+Templates support three authoring styles:
+
+<Tabs>
+  <Tab title="Markdown">
+    Add `// @use-markdown` at the top of the template. All content is processed as Markdown and converted to Zotero rich text.
+
+    ```text
+    // @use-markdown
+    # ${topItem.getField("title")}
+
+    **Authors**: ${topItem.getCreators().map(c => c.lastName).join(", ")}
+    ```
+  </Tab>
+  <Tab title="HTML">
+    Write HTML directly. No pragma required.
+
+    ```html
+    <h1>${topItem.getField("title")}</h1>
+    <p><strong>DOI:</strong> ${topItem.getField("DOI")}</p>
+    ```
+  </Tab>
+  <Tab title="JavaScript">
+    Wrap single-line expressions in `${...}` and multi-line functions in `${{...}}$`.
+
+    ```javascript
+    ${{
+      const year = topItem.getField("year");
+      const authors = topItem.getCreators();
+      return `${authors[0]?.lastName} (${year})`;
+    }}$
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>Need to share a template you wrote? Open the template editor, select your template, click **Options** → **Copy share code**, and paste the result into a GitHub Discussions post.</Tip>

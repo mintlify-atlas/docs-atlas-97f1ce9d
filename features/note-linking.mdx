@@ -1,0 +1,83 @@
+---
+title: "Link notes together with Better Notes for Zotero"
+description: "Create and manage bidirectional note links in Zotero with Better Notes. Connect knowledge fragments with one click using the link creator."
+---
+
+Note links let you connect knowledge fragments stored across different Zotero notes. Better Notes makes it easy to create these links from inside the note editor and then explore the resulting network of connections through a relation graph and an inbound/outbound link panel.
+
+## What note links are
+
+A note link is a clickable reference from one Zotero note to another, stored as a `zotero://note/` URI. When you follow a note link, Zotero opens the target note and scrolls to the linked line or section. Better Notes builds a bidirectional index of these links so you can always see which notes reference a given note and which notes that note references.
+
+Note links are useful when you want to:
+
+- Reference a literature summary from a synthesis note
+- Cross-reference methodology notes across multiple papers
+- Build a knowledge graph from annotated readings
+
+## Creating note links
+
+<Steps>
+  <Step title="Open a note in a tab">
+    Double-click a note item in your library to open it as a tab. Note link creation requires the full note tab layout.
+  </Step>
+  <Step title="Open the link creator">
+    Click the Better Notes icon (the chain-link button) in the note editor title bar. The link creator window opens.
+  </Step>
+  <Step title="Choose a link direction">
+    Select either **Mention in** or **Link to** (see below), then pick the target note from the list.
+  </Step>
+  <Step title="Confirm">
+    Click **OK**. Better Notes inserts the link using the `[QuickInsertV3]` template and updates the relation index.
+  </Step>
+</Steps>
+
+## Mention in vs. Link to
+
+The link creator offers two directions for inserting a link:
+
+| Action | What it inserts | Direction |
+|--------|-----------------|-----------|
+| **Mention in** | Inserts a link to the **current note** into the **note you pick** | Inbound — the picked note now references this note |
+| **Link to** | Inserts links to the **notes you pick** into the **current note** | Outbound — this note now references the picked notes |
+
+Use **Mention in** when you are in a source note and want to register it inside a higher-level summary. Use **Link to** when you are in a summary and want to pull in references to individual notes.
+
+## Copying note links manually
+
+You can copy a note link without using the link creator:
+
+- **Right-click** inside the editor and choose **Copy → Copy link at line N** or **Copy link at section**.
+- From the **settings menu** (the gear icon in the toolbar), choose **Copy link at line** or **Copy link at section**.
+
+Paste the copied link into any other note to create a manual link.
+
+<Note>Links copied manually are plain `zotero://note/` URIs. Better Notes does not auto-insert them via a template — you paste them as raw text and they render as clickable links in the editor.</Note>
+
+## Exploring links in the context pane
+
+Every note tab includes a context pane on the right side with three link-related panels:
+
+<CardGroup cols={2}>
+  <Card title="Relation graph" icon="diagram-project">
+    An interactive visual graph showing the note's connections. Nodes represent notes; edges represent links. Click a node to navigate to that note.
+  </Card>
+  <Card title="Inbound links" icon="arrow-right">
+    A list of every note that links to the current note. Each entry is clickable and opens the referencing note.
+  </Card>
+  <Card title="Outbound links" icon="arrow-left">
+    A list of every note that the current note links to. Each entry is clickable and opens the target note.
+  </Card>
+  <Card title="Update relations" icon="rotate">
+    Use **Settings → Update related notes** in the editor toolbar to refresh the relation index for the current note after making manual changes.
+  </Card>
+</CardGroup>
+
+## Link preview
+
+When you hover over a note link in the editor while holding `Ctrl` (Windows/Linux) or `Cmd` (macOS), a preview of the linked note appears inline. You can also click the link to open it in a preview pane, or `Shift`+click to open it in a new Better Notes window.
+
+The link popup also provides two extra buttons:
+
+- **Import linked note** — embeds the content of the linked note at the link's position using the `[QuickImportV2]` template.
+- **Update link text** — refreshes the link's display text to match the current title of the target note.
